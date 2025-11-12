@@ -137,12 +137,16 @@ chmod +x setup-production-env.sh deploy-to-runpod-production.sh
 4. Find: **Zone ID** (right side)
 5. Click to copy
 
-### Your OpenAI API Key
+### Your API Keys
 
-You provided this earlier:
-```
-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
-```
+**OpenRouter** (Primary - Recommended):
+- Get from: https://openrouter.ai/keys
+- Provides 30+ models through one API
+- Cost-optimized routing
+
+**OpenAI** (Optional - Fallback):
+- Get from: https://platform.openai.com/api-keys
+- Only needed if not using OpenRouter
 
 ---
 

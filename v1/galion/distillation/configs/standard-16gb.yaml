@@ -1,0 +1,135 @@
+# Nexus Core - 16GB Standard Model Configuration
+# Optimized for production deployment with balanced performance and resource usage
+
+model:
+  name: "nexus-core-standard-16gb"
+  version: "1.0.0"
+  target_size: "16GB"
+  base_model: "nexus-core-500gb"
+  
+architecture:
+  type: "transformer"
+  layers: 32              # Reduced from 96 in base model
+  hidden_size: 2048       # Reduced from 8192
+  attention_heads: 32     # Reduced from 128
+  intermediate_size: 8192 # Reduced from 32768
+  vocab_size: 50000       # Moderate vocabulary
+  max_sequence_length: 8192
+  
+distillation:
+  method: "progressive_distillation"
+  teacher_model: "nexus-core-500gb"
+  temperature: 2.0
+  alpha: 0.5              # Balanced distillation and student loss
+  beta: 0.5
+  
+  # Pruning strategy
+  pruning:
+    enabled: true
+    method: "structured"
+    sparsity: 0.4         # 40% sparsity
+    
+  # Quantization
+  quantization:
+    enabled: true
+    method: "int8_mixed"  # Mixed precision quantization
+    calibration_samples: 5000
+    sensitive_layers: ["attention", "output"]
+    
+  # Layer reduction
+  layer_distillation:
+    strategy: "intelligent_merge"
+    skip_factor: 3
+    preserve_important_layers: true
+    
+  # Attention distillation
+  attention_distillation:
+    enabled: true
+    method: "attention_transfer"
+    
+training:
+  batch_size: 64
+  learning_rate: 3e-5
+  epochs: 15
+  warmup_steps: 2000
+  gradient_accumulation: 2
+  mixed_precision: "bf16"
+  
+  optimizer:
+    type: "adamw"
+    betas: [0.9, 0.999]
+    weight_decay: 0.01
+    eps: 1e-8
+    
+  scheduler:
+    type: "cosine_with_restarts"
+    min_lr: 5e-7
+    restarts: 3
+    
+dataset:
+  training:
+    - "data/nexus_conversations.jsonl"
+    - "data/nexus_tasks.jsonl"
+    - "data/code_generation.jsonl"
+    - "data/reasoning_tasks.jsonl"
+    - "data/synthetic_distill.jsonl"
+  validation:
+    - "data/validation_set.jsonl"
+    - "data/benchmark_tasks.jsonl"
+  max_samples: 2000000    # Larger dataset for standard
+  
+capabilities:
+  # Core features (full support)
+  text_generation: true
+  question_answering: true
+  summarization: true
+  classification: true
+  sentiment_analysis: true
+  named_entity_recognition: true
+  
+  # Advanced features
+  code_generation: true
+  reasoning: true
+  chain_of_thought: true
+  function_calling: true
+  
+  # Limited features
+  multimodal: false
+  ultra_long_context: false  # Limited to 8K tokens
+  
+hardware_requirements:
+  min_ram: "32GB"
+  min_vram: "16GB"
+  recommended_ram: "64GB"
+  recommended_vram: "24GB"
+  cpu_cores: 8
+  
+performance_targets:
+  inference_speed: "100 tokens/sec"  # On RTX 4090
+  latency: "< 50ms"
+  accuracy_retention: "95%"          # Compared to base model
+  throughput: "1000 requests/min"
+  
+export:
+  formats:
+    - "onnx"
+    - "tensorrt"
+    - "pytorch"
+    - "safetensors"
+  optimize_for_inference: true
+  fuse_operations: true
+  
+deployment:
+  platforms:
+    - "cloud_gpu"
+    - "dedicated_servers"
+    - "kubernetes"
+    - "docker"
+  container_size: "20GB"   # Including runtime
+  
+monitoring:
+  enable_metrics: true
+  log_level: "INFO"
+  track_performance: true
+  alert_on_degradation: true
+

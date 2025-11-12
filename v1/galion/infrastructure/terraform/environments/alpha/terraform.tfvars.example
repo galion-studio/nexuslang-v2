@@ -1,0 +1,46 @@
+# Example Terraform Variables for Alpha Environment
+# Copy this file to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars to git!
+
+aws_region   = "us-east-1"
+project_name = "galion-app"
+environment  = "alpha"
+
+# Networking
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
+
+# Compute
+general_instance_type    = "m7i.large"
+gpu_instance_type        = "g5.2xlarge"
+general_min_size         = 2
+general_max_size         = 4
+general_desired_capacity = 2
+gpu_min_size             = 1
+gpu_max_size             = 2
+gpu_desired_capacity     = 1
+
+# Database
+rds_instance_class    = "db.t4g.medium"
+rds_allocated_storage = 100
+db_name               = "galionapp"
+db_username           = "galionadmin"
+db_password           = "CHANGE_ME_STRONG_PASSWORD_HERE"  # Generate with: openssl rand -base64 32
+
+# Redis
+redis_node_type  = "cache.t4g.small"
+redis_auth_token = "CHANGE_ME_STRONG_TOKEN_HERE"  # Generate with: openssl rand -base64 32
+
+# Security
+jwt_secret         = "CHANGE_ME_JWT_SECRET_HERE"  # Generate with: openssl rand -base64 64
+security_alert_email = "admin@galion.app"
+
+# API Keys (optional for alpha, can be empty)
+openai_api_key     = ""  # Get from https://platform.openai.com/api-keys
+elevenlabs_api_key = ""  # Get from https://elevenlabs.io/
+openrouter_api_key = ""  # Get from https://openrouter.ai/
+
+# ACM Certificate (create in AWS Console first)
+acm_certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERTIFICATE_ID"
+

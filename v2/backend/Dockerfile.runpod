@@ -1,0 +1,53 @@
+# Dockerfile for RunPod Deployment
+# Optimized for RunPod's infrastructure with GPU support (optional)
+
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 nexus && \
+    mkdir -p /workspace /app && \
+    chown -R nexus:nexus /workspace /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first (for caching)
+COPY --chown=nexus:nexus requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY --chown=nexus:nexus . .
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/data && \
+    chown -R nexus:nexus /app/logs /app/data
+
+# Switch to non-root user
+USER nexus
+
+# Expose port (RunPod standard ports)
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Default command (can be overridden in RunPod)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+

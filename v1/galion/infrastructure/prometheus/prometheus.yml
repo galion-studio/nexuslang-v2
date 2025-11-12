@@ -1,0 +1,43 @@
+# Prometheus configuration for Nexus Core
+global:
+  scrape_interval: 15s # Scrape targets every 15 seconds
+  evaluation_interval: 15s # Evaluate rules every 15 seconds
+  external_labels:
+    cluster: 'nexus-core'
+    environment: 'development'
+
+# Scrape configurations
+scrape_configs:
+  # Analytics Service metrics
+  - job_name: 'analytics-service'
+    static_configs:
+      - targets: ['analytics-service:9090']
+        labels:
+          service: 'analytics'
+
+  # API Gateway metrics (if added in future)
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          service: 'gateway'
+
+  # Auth Service metrics (if added in future)
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-service:8000']
+        labels:
+          service: 'auth'
+
+  # User Service metrics (if added in future)
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['user-service:8001']
+        labels:
+          service: 'user'
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+

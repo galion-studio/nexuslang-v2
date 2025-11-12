@@ -1,0 +1,73 @@
+// Example 10: Complete AI Assistant
+// Combines personality, knowledge, and voice
+
+// Define assistant personality
+personality {
+    curiosity: 0.85,
+    analytical: 0.9,
+    empathetic: 0.95,
+    helpfulness: 1.0,
+    precision: 0.92
+}
+
+fn main() {
+    print("=== NexusLang v2 AI Assistant ===")
+    print("")
+    
+    // Greet user
+    say("Hello! I'm your AI assistant powered by NexusLang v2.", emotion="friendly")
+    print("🎤 AI: Hello! I'm your AI assistant powered by NexusLang v2.")
+    print("")
+    
+    // Show capabilities
+    say("I can help with research, coding, and problem-solving.", emotion="helpful")
+    print("🎤 AI: I can help with research, coding, and problem-solving.")
+    print("")
+    
+    // Demonstrate knowledge access
+    print("📚 Accessing knowledge base...")
+    let topics = ["AI", "quantum physics"]
+    
+    for topic in topics {
+        research_topic(topic)
+    }
+    
+    // Show personality-driven behavior
+    print("")
+    print("💡 My Personality Traits:")
+    print("  Curiosity:   0.85 → I love exploring new ideas")
+    print("  Analytical:  0.90 → I think systematically")
+    print("  Empathetic:  0.95 → I understand your needs")
+    print("  Helpfulness: 1.00 → Always here to help!")
+    print("")
+    
+    // Final message
+    say("Ready to assist you anytime. Just ask!", emotion="confident")
+    print("🎤 AI: Ready to assist you anytime. Just ask!")
+}
+
+fn research_topic(topic) {
+    print("")
+    print("🔍 Researching:", topic)
+    
+    let facts = knowledge(topic)
+    
+    if facts.length > 0 {
+        print("✅ Found", facts.length, "verified facts")
+        
+        // Show first fact
+        let top_fact = facts[0]
+        print("   📖", top_fact["title"])
+        print("   →", top_fact["summary"])
+        
+        // Voice summary
+        say("I found information about " + topic, emotion="informative")
+        print("   🎤 AI: I found information about " + topic)
+    } else {
+        print("❌ No knowledge found for", topic)
+        say("I don't have information about " + topic + " yet.", emotion="apologetic")
+    }
+}
+
+main()
+

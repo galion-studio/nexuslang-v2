@@ -1,0 +1,109 @@
+# Environment variables - NEVER COMMIT SECRETS
+.env
+.env.*
+*.env
+.env.local
+.env.production
+.env.development
+.env.content-manager
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.pyc
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+vendor/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.sql.gz
+backup_*
+*.dump
+backups/
+
+# Security scan results
+security-scan-results/
+vulnerability-reports/
+*.sarif
+security-scan-report-*.txt
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+known_hosts
+
+# API Keys and Credentials
+*api-keys*
+*credentials*
+*secrets*
+oauth-tokens/
+.credentials/
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+
+# Temporary documentation
+*.plan.md
+*_TEMP.md
+*_OLD.md
+
+# User uploaded content
+media_storage/
+uploads/
+user-content/
+
+# Production data
+v1/galion/data/
+v2/data/

@@ -1,0 +1,11 @@
+Year,CapEx_USD,OpEx_USD,Total_USD,Cumulative_USD,Notes
+Year_0,4329000,0,4329000,4329000,"Initial hardware purchase (GPUs, servers, storage, networking)"
+Year_1,0,5345900,5345900,9674900,"First year of operations (salaries, electricity, data center)"
+Year_2,865800,5345900,6211700,15886600,"20% hardware refresh (replace aging GPUs, add capacity)"
+Year_3,0,5345900,5345900,21232500,Ongoing operations (no major hardware purchases)
+TOTAL,5194800,16037700,21232500,,Total Cost of Ownership over 3 years
+Avg_Annual,1731600,5345900,7077500,,Average annual cost (Year 1-3)
+Avg_Monthly,144300,445492,589792,,Average monthly cost (Year 1-3)
+Per_User_Cost_Assumption,,,,"Assuming 10K active users by Year 3, TCO per user = $2,123"
+Break_Even_Analysis,,,,,"If $10/user/month subscription, need ~7,078 paying users to break even on annual costs"
+

@@ -1,0 +1,53 @@
+# Security Policy for NexusLang v2
+# https://securitytxt.org/
+
+Contact: mailto:security@nexuslang.dev
+Contact: https://github.com/your-org/nexuslang/security/advisories/new
+Expires: 2026-12-31T23:59:59.000Z
+Encryption: https://keys.openpgp.org/search?q=security@nexuslang.dev
+Preferred-Languages: en
+Canonical: https://nexuslang.dev/.well-known/security.txt
+
+# Vulnerability Disclosure Policy
+
+We take security seriously at NexusLang. If you discover a security vulnerability, please report it responsibly.
+
+## What to Report
+
+- Authentication/authorization bypasses
+- Code execution vulnerabilities
+- SQL injection, XSS, CSRF
+- Data leakage or exposure
+- Denial of service vulnerabilities
+- Privilege escalation issues
+
+## What NOT to Report
+
+- Social engineering attacks
+- Physical attacks on infrastructure
+- Issues in third-party services
+- Already-known vulnerabilities
+
+## Response Timeline
+
+- Initial response: Within 24 hours
+- Status update: Within 7 days
+- Fix timeline: Depends on severity
+  - Critical: 24-48 hours
+  - High: 1 week
+  - Medium: 2-4 weeks
+  - Low: Best effort
+
+## Responsible Disclosure
+
+- Please allow us reasonable time to fix the issue before public disclosure
+- We will acknowledge your contribution in our security advisories (if desired)
+- We may offer rewards for significant findings (subject to our bug bounty policy)
+
+## PGP Key
+
+For encrypted communications, use our PGP key:
+https://keys.openpgp.org/search?q=security@nexuslang.dev
+
+Thank you for helping keep NexusLang secure! 🔒
+

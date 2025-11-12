@@ -1,0 +1,18 @@
+Optimization_Strategy,Current_Cost_USD,Optimized_Cost_USD,Savings_USD,Savings_Percent,Implementation_Complexity,Timeline,Notes
+Spot_Instances_for_Training,1728000,1036800,691200,40%,Medium,Month_3,"Use AWS EC2 Spot for non-critical training (70% discount)"
+Reserved_Instances_(1_year),5345900,4544015,801885,15%,Low,Month_1,"Commit to 1-year Reserved Instances for ECS, RDS, ElastiCache"
+Model_Compression_(Quantization),1728000,1382400,345600,20%,High,Month_6,"4-bit quantization reduces GPU requirements by 50%"
+Self_Hosted_Whisper,60000,5000,55000,92%,Medium,Month_6,"Replace OpenAI Whisper API with self-hosted Whisper Large v3"
+Self_Hosted_TTS,135000,10000,125000,93%,High,Month_12,"Replace ElevenLabs with open-source Coqui TTS"
+Data_Tiering_(S3_Lifecycle),24000,6000,18000,75%,Low,Month_1,"Move infrequently accessed data to Glacier"
+Optimize_Networking,12000,7000,5000,42%,Medium,Month_3,"Use CloudFlare for CDN, reduce bandwidth costs"
+GPU_Utilization_Increase,1728000,1382400,345600,20%,Medium,Month_3,"Improve GPU utilization from 60% to 80% via batch scheduling"
+Open_Source_Monitoring,40000,5000,35000,88%,Medium,Month_2,"Replace commercial monitoring with Prometheus + Grafana"
+Reduce_Redundancy_(Multi_AZ),480000,360000,120000,25%,Medium,Month_6,"Single AZ for dev/staging, Multi-AZ only for production"
+Team_Optimization,1940000,1455000,485000,25%,High,Month_12,"Hire 1 senior engineer ($250K) instead of 2 mid-level ($150K each)"
+TOTAL_OPTIMIZATIONS,13220900,10193615,3027285,22.9%,,"Multi-phase implementation (Month 1-12)"
+Year_1_TCO_Original,9674900,,,,,,"Without optimizations"
+Year_1_TCO_Optimized,7457903,,2216997,22.9%,,,With all optimizations implemented
+Three_Year_TCO_Original,21232500,,,,,,"Without optimizations"
+Three_Year_TCO_Optimized,16381338,,4851162,22.9%,,,With all optimizations over 3 years
+

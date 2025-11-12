@@ -1,0 +1,15 @@
+Category,Component,Quantity,Unit_Cost_USD,Total_Cost_USD,Vendor,Notes
+GPU_Cluster,NVIDIA H100 80GB,32,28000,896000,NVIDIA,Primary training for large models (>10B parameters)
+GPU_Cluster,NVIDIA A100 80GB,64,25000,1600000,NVIDIA,Production inference and fine-tuning
+CPU_Servers,AMD EPYC 9654 Server,32,30000,960000,Dell/Supermicro,2× EPYC 9654 (96 cores) + 512GB RAM per server
+Storage_Hot,NVMe SSD Array (500 TB),1,150000,150000,Samsung/Micron,"15M IOPS, <100μs latency, active training datasets"
+Storage_Warm,SATA SSD Array (2 PB),1,280000,280000,Samsung/Crucial,"500K IOPS, <1ms latency, recent training runs"
+Storage_Cold,HDD Array (3 PB),1,45000,45000,Seagate/WD,"10K IOPS, <10ms latency, historical archives"
+Networking,100 Gbps Switches,10,8000,80000,Cisco/Arista,Low-latency fabric for GPU interconnect
+Networking,Network Interface Cards,96,500,48000,Mellanox/Intel,100 Gbps NICs for each server
+Power,Redundant UPS Systems,4,30000,120000,APC/Eaton,N+1 redundancy for power protection
+Cooling,Precision AC Units,6,15000,90000,Liebert/Stulz,"Maintain 18-27°C, 45-55% humidity"
+Racks,Server Racks (42U),20,2000,40000,APC/Tripp Lite,Cable management and airflow optimization
+Miscellaneous,Cables & Accessories,1,20000,20000,Various,"Optical cables, power cables, KVM switches"
+TOTAL,,,,,4329000,,Total Hardware Capital Expenditure
+

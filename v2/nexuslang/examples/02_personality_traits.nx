@@ -1,0 +1,51 @@
+// Example 2: AI Personality System
+// Define how your AI thinks and behaves
+
+// Set AI personality traits (0.0 to 1.0)
+personality {
+    curiosity: 0.95,      // Highly curious - explores new solutions
+    analytical: 0.9,      // Very analytical - systematic thinking
+    creative: 0.75,       // Creative - thinks outside the box
+    empathetic: 0.8,      // Empathetic - understands user needs
+    precision: 0.95,      // High precision - accuracy matters
+    verbosity: 0.6        // Moderate verbosity - balanced explanations
+}
+
+fn main() {
+    print("=== AI Personality Demo ===")
+    print("")
+    
+    // Personality affects how AI solves problems
+    let problem = "Optimize database queries"
+    solve_problem(problem)
+}
+
+fn solve_problem(problem) {
+    print("Problem:", problem)
+    print("")
+    print("AI Approach:")
+    
+    // High curiosity → explore novel solutions
+    print("  🔍 [Curiosity 0.95] Exploring unconventional approaches...")
+    print("     - Consider caching strategies")
+    print("     - Research new indexing methods")
+    print("")
+    
+    // High analytical → systematic analysis
+    print("  📊 [Analytical 0.9] Performing systematic analysis...")
+    print("     - Benchmark current performance")
+    print("     - Identify bottlenecks")
+    print("")
+    
+    // Creative thinking
+    print("  💡 [Creative 0.75] Thinking creatively...")
+    print("     - Combine multiple optimization techniques")
+    print("     - Design hybrid solution")
+    print("")
+    
+    print("✅ Solution: Multi-layered caching + smart indexing")
+    print("   (Influenced by personality traits)")
+}
+
+main()
+

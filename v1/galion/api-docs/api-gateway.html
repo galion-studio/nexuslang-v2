@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Gateway - Nexus Core</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .header h1 {
+            font-size: 2.5em;
+            color: #2d3748;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header .subtitle { color: #718096; font-size: 1.1em; margin-bottom: 20px; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #c6f6d5;
+            color: #22543d;
+            margin-right: 10px;
+        }
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        .content-card h2 {
+            color: #2d3748;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+        .content-card h3 { color: #4a5568; font-size: 1.3em; margin-top: 25px; margin-bottom: 15px; }
+        .route-card {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .description { margin-top: 10px; color: #4a5568; line-height: 1.6; }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        code {
+            font-family: 'Courier New', monospace;
+            background: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #e53e3e;
+        }
+        .feature-list { list-style: none; padding: 0; }
+        .feature-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #48bb78;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .nav-links { display: flex; gap: 15px; flex-wrap: wrap; }
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .nav-link.secondary { background: #cbd5e0; color: #2d3748; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #edf2f7; font-weight: 600; color: #2d3748; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 API Gateway</h1>
+            <p class="subtitle">Central entry point with authentication, rate limiting, and request routing</p>
+            <div>
+                <span class="badge">Port: 8080</span>
+                <span class="badge">Go 1.21</span>
+                <span class="badge">Gorilla Mux</span>
+            </div>
+            <div class="nav-links" style="margin-top: 20px;">
+                <a href="../nexus-status.html" class="nav-link">← Back to Status</a>
+                <a href="../docs/API_GATEWAY.md" class="nav-link secondary">📄 Service Details</a>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>🎯 Overview</h2>
+            <p class="description">
+                The API Gateway is the single entry point for all client requests to Nexus Core. It handles authentication,
+                rate limiting, request routing, and provides a unified API interface while hiding the complexity of the
+                microservices architecture.
+            </p>
+            
+            <h3>Key Features</h3>
+            <ul class="feature-list">
+                <li>JWT authentication and validation</li>
+                <li>Redis-based rate limiting (60 requests/minute)</li>
+                <li>Intelligent request routing to backend services</li>
+                <li>CORS configuration for frontend access</li>
+                <li>Request ID tracking for distributed tracing</li>
+                <li>Security headers (CSP, HSTS, etc.)</li>
+                <li>Centralized logging</li>
+                <li>Health check aggregation</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h2>🔌 Routing Rules</h2>
+
+            <div class="route-card">
+                <h3 style="margin-top: 0; color: #2d3748;">Authentication Routes</h3>
+                <p class="description">Proxied to Auth Service (port 8000)</p>
+                <pre>/api/v1/auth/* → http://auth-service:8000/api/v1/auth/*</pre>
+                <ul class="feature-list" style="margin-top: 15px;">
+                    <li>No authentication required</li>
+                    <li>Rate limited</li>
+                    <li>Handles: register, login, 2FA, token refresh</li>
+                </ul>
+            </div>
+
+            <div class="route-card">
+                <h3 style="margin-top: 0; color: #2d3748;">User Routes</h3>
+                <p class="description">Proxied to User Service (port 8001)</p>
+                <pre>/api/v1/users/* → http://user-service:8001/api/v1/users/*</pre>
+                <ul class="feature-list" style="margin-top: 15px;">
+                    <li>Authentication required</li>
+                    <li>JWT token validation</li>
+                    <li>Rate limited</li>
+                    <li>Handles: profiles, search, admin operations</li>
+                </ul>
+            </div>
+
+            <div class="route-card">
+                <h3 style="margin-top: 0; color: #2d3748;">Content Routes</h3>
+                <p class="description">Proxied to Content Service (future)</p>
+                <pre>/api/v1/content/* → http://content-service:8002/api/v1/content/*</pre>
+                <ul class="feature-list" style="margin-top: 15px;">
+                    <li>Authentication required</li>
+                    <li>JWT token validation</li>
+                    <li>Rate limited</li>
+                </ul>
+            </div>
+
+            <div class="route-card">
+                <h3 style="margin-top: 0; color: #2d3748;">System Routes</h3>
+                <p class="description">Handled directly by gateway</p>
+                <pre>GET /health   → Health check (no auth)
+GET /metrics  → Prometheus metrics (no auth)</pre>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>🔒 Security Features</h2>
+
+            <h3>JWT Authentication</h3>
+            <p class="description">
+                The gateway validates JWT tokens for protected routes. Tokens must be provided in the Authorization header:
+            </p>
+<pre>Authorization: Bearer your_jwt_token_here</pre>
+
+            <h3>Rate Limiting</h3>
+            <table>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Rate Limit</td>
+                    <td>60 requests per minute per IP</td>
+                </tr>
+                <tr>
+                    <td>Storage</td>
+                    <td>Redis (sliding window)</td>
+                </tr>
+                <tr>
+                    <td>Response</td>
+                    <td>429 Too Many Requests</td>
+                </tr>
+                <tr>
+                    <td>Headers</td>
+                    <td>X-RateLimit-Limit, X-RateLimit-Remaining</td>
+                </tr>
+            </table>
+
+            <h3>Security Headers</h3>
+            <p class="description">Automatically added to all responses:</p>
+            <ul class="feature-list">
+                <li><code>X-Content-Type-Options: nosniff</code></li>
+                <li><code>X-Frame-Options: DENY</code></li>
+                <li><code>X-XSS-Protection: 1; mode=block</code></li>
+                <li><code>Strict-Transport-Security: max-age=31536000</code></li>
+                <li><code>Content-Security-Policy: default-src 'self'</code></li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h2>📊 Middleware Pipeline</h2>
+            <p class="description">Every request goes through the following middleware (in order):</p>
+            
+            <table>
+                <tr>
+                    <th>Order</th>
+                    <th>Middleware</th>
+                    <th>Purpose</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>CORS</td>
+                    <td>Handle cross-origin requests</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Request ID</td>
+                    <td>Generate/extract unique request ID</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Logging</td>
+                    <td>Log request details</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Rate Limiter</td>
+                    <td>Check rate limits</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Authentication</td>
+                    <td>Validate JWT (protected routes only)</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Proxy</td>
+                    <td>Forward request to backend service</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="content-card">
+            <h2>⚙️ Configuration</h2>
+            <h3>Environment Variables</h3>
+            <table>
+                <tr>
+                    <th>Variable</th>
+                    <th>Description</th>
+                    <th>Default</th>
+                </tr>
+                <tr>
+                    <td><code>PORT</code></td>
+                    <td>Gateway port</td>
+                    <td>8080</td>
+                </tr>
+                <tr>
+                    <td><code>ENVIRONMENT</code></td>
+                    <td>Environment name</td>
+                    <td>development</td>
+                </tr>
+                <tr>
+                    <td><code>JWT_SECRET_KEY</code></td>
+                    <td>Secret for JWT validation</td>
+                    <td>Required</td>
+                </tr>
+                <tr>
+                    <td><code>JWT_ALGORITHM</code></td>
+                    <td>JWT algorithm</td>
+                    <td>HS256</td>
+                </tr>
+                <tr>
+                    <td><code>AUTH_SERVICE_URL</code></td>
+                    <td>Auth service address</td>
+                    <td>http://localhost:8000</td>
+                </tr>
+                <tr>
+                    <td><code>USER_SERVICE_URL</code></td>
+                    <td>User service address</td>
+                    <td>http://localhost:8001</td>
+                </tr>
+                <tr>
+                    <td><code>REDIS_URL</code></td>
+                    <td>Redis connection string</td>
+                    <td>redis://localhost:6379/0</td>
+                </tr>
+                <tr>
+                    <td><code>RATE_LIMIT_ENABLED</code></td>
+                    <td>Enable rate limiting</td>
+                    <td>true</td>
+                </tr>
+                <tr>
+                    <td><code>RATE_LIMIT_REQUESTS_PER_MINUTE</code></td>
+                    <td>Rate limit threshold</td>
+                    <td>60</td>
+                </tr>
+                <tr>
+                    <td><code>ALLOWED_ORIGINS</code></td>
+                    <td>CORS allowed origins (comma-separated)</td>
+                    <td>http://localhost:3000</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="content-card">
+            <h2>📈 Monitoring</h2>
+            
+            <h3>Health Check Endpoint</h3>
+<pre>GET /health
+
+Response:
+{
+  "status": "healthy",
+  "service": "api-gateway"
+}</pre>
+
+            <h3>Prometheus Metrics</h3>
+<pre>GET /metrics
+
+Metrics:
+- api_gateway_up: Gateway status (1 = up, 0 = down)
+- http_requests_total: Total HTTP requests
+- http_request_duration_seconds: Request latency histogram</pre>
+
+            <h3>Request Tracing</h3>
+            <p class="description">
+                Every request gets a unique ID for distributed tracing. The ID is available in:
+            </p>
+            <ul class="feature-list">
+                <li>Response header: <code>X-Request-ID</code></li>
+                <li>Server logs</li>
+                <li>Forwarded to backend services</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h2>📊 Error Responses</h2>
+            <table>
+                <tr>
+                    <th>Status Code</th>
+                    <th>Error</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td>401</td>
+                    <td>Unauthorized</td>
+                    <td>Missing or invalid JWT token</td>
+                </tr>
+                <tr>
+                    <td>429</td>
+                    <td>Too Many Requests</td>
+                    <td>Rate limit exceeded</td>
+                </tr>
+                <tr>
+                    <td>502</td>
+                    <td>Bad Gateway</td>
+                    <td>Backend service unavailable</td>
+                </tr>
+                <tr>
+                    <td>503</td>
+                    <td>Service Unavailable</td>
+                    <td>Gateway overloaded or starting up</td>
+                </tr>
+                <tr>
+                    <td>504</td>
+                    <td>Gateway Timeout</td>
+                    <td>Backend service timeout (15s)</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="content-card">
+            <h2>🔧 Performance</h2>
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Average Latency</td>
+                    <td>&lt; 10ms (gateway only, not including backend)</td>
+                </tr>
+                <tr>
+                    <td>Max Connections</td>
+                    <td>Unlimited (Go handles concurrency efficiently)</td>
+                </tr>
+                <tr>
+                    <td>Read Timeout</td>
+                    <td>15 seconds</td>
+                </tr>
+                <tr>
+                    <td>Write Timeout</td>
+                    <td>15 seconds</td>
+                </tr>
+                <tr>
+                    <td>Idle Timeout</td>
+                    <td>60 seconds</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+

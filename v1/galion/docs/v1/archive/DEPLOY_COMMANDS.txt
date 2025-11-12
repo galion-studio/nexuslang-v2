@@ -1,0 +1,211 @@
+# EXACT COMMANDS TO RUN ON YOUR VPS
+# Copy and paste these commands one by one
+
+# ============================================
+# STEP 1: INITIAL SETUP (Run as root)
+# ============================================
+
+# Update system
+apt update && apt upgrade -y
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
+systemctl enable docker && systemctl start docker
+
+# Install Docker Compose
+apt install -y docker-compose-plugin
+
+# Install Nginx, Certbot, and tools
+apt install -y nginx certbot python3-certbot-nginx git curl wget htop postgresql-client-15 redis-tools fail2ban ufw
+
+# Configure firewall
+ufw --force reset
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable
+
+# Start fail2ban
+systemctl enable fail2ban && systemctl start fail2ban
+
+# Create deploy user
+adduser --disabled-password --gecos "" deploy
+usermod -aG sudo,docker deploy
+
+# Copy SSH keys to deploy user
+mkdir -p /home/deploy/.ssh
+cp /root/.ssh/authorized_keys /home/deploy/.ssh/
+chown -R deploy:deploy /home/deploy/.ssh
+chmod 700 /home/deploy/.ssh
+
+echo "✅ Initial setup complete!"
+
+# ============================================
+# STEP 2: SWITCH TO DEPLOY USER
+# ============================================
+
+su - deploy
+cd ~
+
+# ============================================
+# STEP 3: CREATE DIRECTORY STRUCTURE
+# ============================================
+
+mkdir -p galion/{data,backups,logs,configs,nginx,monitoring,scripts}
+mkdir -p galion/data/{postgres,redis,uploads,logs,prometheus}
+mkdir -p galion/backups/wal_archive
+cd galion
+
+echo "✅ Directories created!"
+
+# ============================================
+# STEP 4: UPLOAD FILES
+# ============================================
+
+# From your Windows machine, open NEW PowerShell window and run:
+# scp -r C:\Users\Gigabyte\Documents\project-nexus\* deploy@54.37.161.67:/home/deploy/galion/
+
+# Wait for upload to complete, then continue on VPS...
+
+# ============================================
+# STEP 5: GENERATE SECRETS
+# ============================================
+
+chmod +x scripts/*.sh
+./scripts/generate-secrets.sh
+
+echo "✅ Secrets generated!"
+
+# ============================================
+# STEP 6: CONFIGURE API KEYS
+# ============================================
+
+nano .env
+
+# Add your API keys:
+# OPENAI_API_KEY=sk-your-actual-key-here
+# ELEVENLABS_API_KEY=your-actual-key-here
+
+# Save: Ctrl+X, Y, Enter
+
+# ============================================
+# STEP 7: BUILD AND START SERVICES
+# ============================================
+
+# Build images
+docker compose build --parallel
+
+# Start infrastructure
+docker compose up -d postgres redis pgbouncer
+
+# Wait 30 seconds
+sleep 30
+
+# Check they're healthy
+docker compose ps postgres redis pgbouncer
+
+# Start applications
+docker compose up -d app-api studio-api app-voice studio-realtime
+
+# Wait 40 seconds
+sleep 40
+
+# Check they're healthy
+docker compose ps
+
+# Start frontends
+docker compose up -d app-frontend studio-frontend
+
+# Start monitoring
+docker compose up -d prometheus node-exporter cadvisor postgres-exporter redis-exporter nginx-exporter
+
+echo "✅ All services started!"
+
+# ============================================
+# STEP 8: CONFIGURE NGINX (Switch to root)
+# ============================================
+
+exit  # Back to root
+
+# Copy nginx configs
+cp /home/deploy/galion/nginx/nginx.conf /etc/nginx/nginx.conf
+cp /home/deploy/galion/nginx/sites-available/galion-app /etc/nginx/sites-available/
+cp /home/deploy/galion/nginx/sites-available/galion-studio /etc/nginx/sites-available/
+cp /home/deploy/galion/nginx/conf.d/nginx-status.conf /etc/nginx/conf.d/
+
+# Enable sites
+ln -sf /etc/nginx/sites-available/galion-app /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/galion-studio /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+
+# Test config
+nginx -t
+
+# Reload nginx
+systemctl reload nginx
+
+echo "✅ Nginx configured!"
+
+# ============================================
+# STEP 9: GET SSL CERTIFICATES
+# ============================================
+
+# For GALION.APP
+certbot --nginx -d galion.app -d www.galion.app -d api.galion.app --non-interactive --agree-tos -m polskitygrys111@gmail.com
+
+# For GALION.STUDIO
+certbot --nginx -d studio.galion.app -d api.studio.galion.app --non-interactive --agree-tos -m polskitygrys111@gmail.com
+
+echo "✅ SSL certificates obtained!"
+
+# ============================================
+# STEP 10: VERIFY DEPLOYMENT
+# ============================================
+
+su - deploy
+cd galion
+
+# Run health check
+./scripts/health-check.sh
+
+# Test external URLs
+curl -I https://galion.app
+curl https://api.galion.app/health
+curl -I https://studio.galion.app
+curl https://api.studio.galion.app/health
+
+# ============================================
+# STEP 11: SETUP AUTOMATED BACKUPS
+# ============================================
+
+# Add cron jobs
+crontab -e
+
+# Add these lines:
+# 0 2 * * * /home/deploy/galion/scripts/backup.sh >> /home/deploy/galion/logs/backup.log 2>&1
+# */5 * * * * /home/deploy/galion/scripts/health-check.sh >> /home/deploy/galion/logs/health.log 2>&1
+
+# ============================================
+# ✅ DEPLOYMENT COMPLETE!
+# ============================================
+
+echo ""
+echo "========================================"
+echo "  🎉 DEPLOYMENT SUCCESSFUL!"
+echo "========================================"
+echo ""
+echo "Your applications are now live at:"
+echo "  • https://galion.app"
+echo "  • https://studio.galion.app"
+echo ""
+echo "Monitor at:"
+echo "  • Prometheus: http://54.37.161.67:9090"
+echo ""
+echo "Next steps:"
+echo "  1. Configure Cloudflare (see docs/CLOUDFLARE_SETUP.md)"
+echo "  2. Monitor first 24 hours closely"
+echo "  3. Run load test: k6 run tests/load/api-test.js"
+echo ""
+

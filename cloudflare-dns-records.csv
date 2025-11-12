@@ -1,0 +1,7 @@
+Type,Name,Content,Proxied,TTL
+A,galion.app,213.173.105.83,TRUE,1
+A,www.galion.app,213.173.105.83,TRUE,1
+A,api.galion.app,213.173.105.83,TRUE,1
+A,studio.galion.app,213.173.105.83,TRUE,1
+A,api.studio.galion.app,213.173.105.83,TRUE,1
+

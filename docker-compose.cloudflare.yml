@@ -1,0 +1,80 @@
+# Docker Compose Configuration for Cloudflare Tunnels
+# This file adds Cloudflare Tunnel services to the main docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d
+
+version: '3.8'
+
+services:
+  # ==================== CLOUDFLARE TUNNEL: galion.studio ====================
+  
+  cloudflared-studio:
+    image: cloudflare/cloudflared:latest
+    container_name: nexus-cloudflared-studio
+    restart: unless-stopped
+    # Run the tunnel using the token directly
+    command: tunnel --no-autoupdate run --token eyJ6b25lSUQiOiIyZmY1YzEwYTExZDhhOTUyNzZkMGI4NGFhZjUzZGYxYiIsImFjY291bnRJRCI6IjU3MTNmNGZjZGUxOGJkNDhhNDU2YWZiYjFiODE1NWVkIiwic2VydmljZUtleSI6InYxLjAtNTZlNDFlMzA1ZDRjYWZlYjQ4MDQ0YmExLWU3OTNiMDhmZDQ2N2VkMWUyYzkzODM1NWJiMjk0ZTg0YWI3YWIzZDRmYWYwZGI1NGNlMGVhZTg0MmNjMTM1OTY3MTg3ZTUzZDRhYzEzMWUyYWEzMjBkYTdlYzFiYjlkZGVkMzEzNjBiZDc5ZmQ2NjUyOTMyN2FkYzUxZWI4MGZlNmUzZDcxZTc4YmVhN2Q4YmU4OWY4OGYyZmExOWUxMWIiLCJhcGlUb2tlbiI6IndrazRIdEVrbG5naG4zNlZxQzdmcmVVMERPeTVZRUJpdmxlZnoxR08ifQ==
+    networks:
+      - nexus-network
+    depends_on:
+      - frontend
+      - backend
+      - grafana
+      - prometheus
+    # Resource limits to prevent excessive resource usage
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    # Security configuration
+    security_opt:
+      - no-new-privileges:true
+    # Health check to ensure tunnel is running
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== CLOUDFLARE TUNNEL: galion.app ====================
+  
+  cloudflared-app:
+    image: cloudflare/cloudflared:latest
+    container_name: nexus-cloudflared-app
+    restart: unless-stopped
+    # Run the tunnel using the token directly
+    command: tunnel --no-autoupdate run --token eyJ6b25lSUQiOiIwMjI2NTFjN2RmZGVhNDhlMzc2YzQ4NzlmZmVkOTA0YiIsImFjY291bnRJRCI6IjU3MTNmNGZjZGUxOGJkNDhhNDU2YWZiYjFiODE1NWVkIiwic2VydmljZUtleSI6InYxLjAtNGU0MmU1MDA1MDgxYjZjMmI4ZjVmN2Q5LTc3ZTZmMmRkMWVjNDJiYmM2ZDkxMWRhZjdhMzBiZWRkYzIzYWRiZGIwYjFlMzA3N2ZmMTc2MTNiZGFhM2I3MDdmNGRmY2IzMjVmNjBlZGNhOTcxYTUzOTIzYTJlM2U2MzIzZDNjYmQzNzk4NzkxYWE4NTc5ZTdiZGViZGFhYjY4MTE2ZmNkYzk3Y2U1YzU2MzMzNDMxYTQwOWNhM2Y5NGUiLCJhcGlUb2tlbiI6Ikt1Z2RBYVRXZ2tncTFnVmVpenh3OFgyZ2ZHU19QOTNkcWhvUTVieHoifQ==
+    networks:
+      - nexus-network
+    depends_on:
+      - frontend
+      - backend
+      - grafana
+      - prometheus
+    # Resource limits to prevent excessive resource usage
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    # Security configuration
+    security_opt:
+      - no-new-privileges:true
+    # Health check to ensure tunnel is running
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Use the existing network from main docker-compose.yml
+networks:
+  nexus-network:
+    external: true
+

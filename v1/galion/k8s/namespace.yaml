@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-core
+  labels:
+    name: nexus-core
+    environment: production
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: nexus-quota
+  namespace: nexus-core
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    persistentvolumeclaims: "10"
+

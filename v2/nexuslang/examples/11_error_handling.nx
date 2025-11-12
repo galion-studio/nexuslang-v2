@@ -1,0 +1,70 @@
+// Example 11: Error Handling and Debugging
+// Learn how to handle errors gracefully
+
+fn main() {
+    print("=== Error Handling Demo ===")
+    print("")
+    
+    print("1. Safe Division:")
+    let result1 = safe_divide(10, 2)
+    print("   10 / 2 =", result1)
+    
+    let result2 = safe_divide(10, 0)
+    print("   10 / 0 =", result2)
+    print("")
+    
+    print("2. Array Bounds Checking:")
+    let arr = [1, 2, 3, 4, 5]
+    print("   Array:", arr)
+    
+    let val1 = safe_get(arr, 2)
+    print("   arr[2] =", val1)
+    
+    let val2 = safe_get(arr, 10)
+    print("   arr[10] =", val2)
+    print("")
+    
+    print("3. Input Validation:")
+    let valid_input = validate_age(25)
+    print("   Age 25:", valid_input)
+    
+    let invalid_input = validate_age(-5)
+    print("   Age -5:", invalid_input)
+    print("")
+    
+    print("✅ Error handling complete!")
+}
+
+fn safe_divide(a, b) {
+    if b == 0 {
+        print("   ⚠️  Error: Division by zero!")
+        return "undefined"
+    }
+    return a / b
+}
+
+fn safe_get(arr, index) {
+    if index < 0 || index >= arr.length {
+        print("   ⚠️  Error: Index out of bounds!")
+        return null
+    }
+    return arr[index]
+}
+
+fn validate_age(age) {
+    if age < 0 {
+        print("   ❌ Invalid: Age cannot be negative")
+        return false
+    }
+    
+    if age > 150 {
+        print("   ❌ Invalid: Age seems unrealistic")
+        return false
+    }
+    
+    print("   ✅ Valid age")
+    return true
+}
+
+main()
+

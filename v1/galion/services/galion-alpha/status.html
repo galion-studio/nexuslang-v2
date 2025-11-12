@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GALION.STUDIO - System Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #ddd;
+        }
+        
+        .status-card.online {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .status-card.offline {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .status-card h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-indicator.online {
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+        }
+        
+        .status-indicator.offline {
+            background: #ef4444;
+        }
+        
+        .status-text {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .url {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .url:hover {
+            text-decoration: underline;
+        }
+        
+        .actions {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+        }
+        
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .button.secondary {
+            background: #6b7280;
+        }
+        
+        .button.secondary:hover {
+            background: #4b5563;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .refresh-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <button class="refresh-btn" onclick="checkStatus()">🔄 Refresh</button>
+    
+    <div class="container">
+        <h1>GALION.STUDIO</h1>
+        <p class="subtitle">System Status Dashboard</p>
+        
+        <div class="status-grid">
+            <div class="status-card" id="backend-card">
+                <h3>
+                    <span class="status-indicator loading" id="backend-indicator"></span>
+                    Backend API
+                </h3>
+                <p class="status-text" id="backend-status">Checking...</p>
+                <a href="http://localhost:5000/health" class="url" target="_blank">
+                    http://localhost:5000
+                </a>
+            </div>
+            
+            <div class="status-card" id="frontend-card">
+                <h3>
+                    <span class="status-indicator loading" id="frontend-indicator"></span>
+                    Frontend
+                </h3>
+                <p class="status-text" id="frontend-status">Checking...</p>
+                <a href="http://localhost:3001" class="url" target="_blank">
+                    http://localhost:3001
+                </a>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="task-count">-</div>
+                <div class="stat-label">Tasks</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="user-count">-</div>
+                <div class="stat-label">Users</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="workspace-count">-</div>
+                <div class="stat-label">Workspaces</div>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <a href="http://localhost:3001" class="button" target="_blank">
+                🚀 Open App
+            </a>
+            <a href="http://localhost:5000/health" class="button secondary" target="_blank">
+                🔧 API Health
+            </a>
+            <a href="SHIPPED.md" class="button secondary">
+                📖 Documentation
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        // Check backend status
+        async function checkBackend() {
+            try {
+                const response = await fetch('http://localhost:5000/health');
+                const data = await response.json();
+                
+                document.getElementById('backend-card').classList.add('online');
+                document.getElementById('backend-indicator').classList.remove('loading');
+                document.getElementById('backend-indicator').classList.add('online');
+                document.getElementById('backend-status').textContent = 'Online - ' + data.service;
+                
+                return true;
+            } catch (error) {
+                document.getElementById('backend-card').classList.add('offline');
+                document.getElementById('backend-indicator').classList.remove('loading');
+                document.getElementById('backend-indicator').classList.add('offline');
+                document.getElementById('backend-status').textContent = 'Offline';
+                
+                return false;
+            }
+        }
+        
+        // Check frontend status
+        async function checkFrontend() {
+            try {
+                const response = await fetch('http://localhost:3001');
+                
+                document.getElementById('frontend-card').classList.add('online');
+                document.getElementById('frontend-indicator').classList.remove('loading');
+                document.getElementById('frontend-indicator').classList.add('online');
+                document.getElementById('frontend-status').textContent = 'Online';
+                
+                return true;
+            } catch (error) {
+                document.getElementById('frontend-card').classList.add('offline');
+                document.getElementById('frontend-indicator').classList.remove('loading');
+                document.getElementById('frontend-indicator').classList.add('offline');
+                document.getElementById('frontend-status').textContent = 'Offline';
+                
+                return false;
+            }
+        }
+        
+        // Get statistics
+        async function getStats() {
+            try {
+                // Get tasks
+                const tasksResponse = await fetch('http://localhost:5000/api/tasks');
+                const tasks = await tasksResponse.json();
+                document.getElementById('task-count').textContent = tasks.length;
+                
+                // Get users
+                const usersResponse = await fetch('http://localhost:5000/api/users');
+                const users = await usersResponse.json();
+                document.getElementById('user-count').textContent = users.length;
+                
+                // Get workspaces
+                const workspacesResponse = await fetch('http://localhost:5000/api/workspaces');
+                const workspaces = await workspacesResponse.json();
+                document.getElementById('workspace-count').textContent = workspaces.length;
+            } catch (error) {
+                console.error('Failed to fetch stats:', error);
+            }
+        }
+        
+        // Check all statuses
+        async function checkStatus() {
+            const backendOnline = await checkBackend();
+            await checkFrontend();
+            
+            if (backendOnline) {
+                await getStats();
+            }
+        }
+        
+        // Check status on load
+        checkStatus();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+</html>
+

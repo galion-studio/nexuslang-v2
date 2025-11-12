@@ -1,0 +1,124 @@
+# Docker Compose for NexusLang v2 Alpha
+# Simplified configuration for quick testing
+
+version: '3.8'
+
+networks:
+  nexus-alpha:
+    driver: bridge
+
+volumes:
+  postgres-alpha-data:
+  redis-alpha-data:
+
+services:
+  # PostgreSQL with pgvector
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: nexus-alpha-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus123}
+      POSTGRES_DB: ${POSTGRES_DB:-nexus_v2}
+    volumes:
+      - postgres-alpha-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - nexus-alpha
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-alpha-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis-alpha-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - nexus-alpha
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Elasticsearch (optional, disable if low memory)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: nexus-alpha-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    networks:
+      - nexus-alpha
+    profiles:
+      - full  # Only start with: docker-compose --profile full up
+
+  # Backend API
+  backend:
+    build:
+      context: ./v2/backend
+      dockerfile: Dockerfile
+    container_name: nexus-alpha-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://nexus:${POSTGRES_PASSWORD:-nexus123}@postgres:5432/nexus_v2
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-me-32-chars}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-64-chars-minimum-for-production}
+      - WHISPER_MODEL=${WHISPER_MODEL:-tiny}
+      - WHISPER_DEVICE=${WHISPER_DEVICE:-cpu}
+      - TTS_DEVICE=${TTS_DEVICE:-cpu}
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./v2/backend:/app
+      - ./v2/nexuslang:/nexuslang
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - nexus-alpha
+
+  # Frontend
+  frontend:
+    build:
+      context: ./v2/frontend
+      dockerfile: Dockerfile
+    container_name: nexus-alpha-frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=development
+    volumes:
+      - ./v2/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    command: npm run dev
+    networks:
+      - nexus-alpha
+

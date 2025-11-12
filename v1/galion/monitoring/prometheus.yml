@@ -1,0 +1,92 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'galion-production'
+    datacenter: 'titanaxe-01'
+
+# Alertmanager configuration (Grafana Cloud handles alerts)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Load alert rules
+rule_files:
+  - 'alerts.yml'
+
+scrape_configs:
+  # ====================  APPLICATION METRICS ====================
+  
+  - job_name: 'app-api'
+    static_configs:
+      - targets: ['app-api:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    
+  - job_name: 'studio-api'
+    static_configs:
+      - targets: ['studio-api:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    
+  - job_name: 'voice-service'
+    static_configs:
+      - targets: ['app-voice:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    
+  - job_name: 'realtime-service'
+    static_configs:
+      - targets: ['studio-realtime:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+  
+  # ==================== INFRASTRUCTURE METRICS ====================
+  
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+      
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+      
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+      
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+    scrape_interval: 30s
+
+  # ==================== CONTAINER METRICS ====================
+  
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    
+  # ==================== PROMETHEUS SELF-MONITORING ====================
+  
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+# Optional: Remote write to Grafana Cloud
+# Uncomment and configure with your Grafana Cloud credentials
+# remote_write:
+#   - url: https://prometheus-prod-XX-prod-us-central-0.grafana.net/api/prom/push
+#     basic_auth:
+#       username: ${GRAFANA_CLOUD_USERNAME}
+#       password: ${GRAFANA_CLOUD_API_KEY}
+#     write_relabel_configs:
+#       - source_labels: [__name__]
+#         regex: 'go_.*'
+#         action: drop  # Drop Go internal metrics to save space
+

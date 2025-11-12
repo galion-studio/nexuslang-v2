@@ -1,0 +1,46 @@
+// Example 3: Knowledge Base Integration
+// Query facts and information directly in your code
+
+fn main() {
+    print("=== Knowledge Base Demo ===")
+    print("")
+    
+    // Query the knowledge base (Grokopedia)
+    print("🔍 Searching for: Quantum Mechanics")
+    let facts = knowledge("quantum mechanics")
+    
+    if facts.length > 0 {
+        print("✅ Found", facts.length, "verified facts!")
+        print("")
+        
+        // Display each fact
+        for i in 0..facts.length {
+            print_fact(facts[i], i + 1)
+        }
+    } else {
+        print("❌ No knowledge found")
+    }
+    
+    print("─" * 50)
+    print("")
+    
+    // Get related concepts
+    print("🔗 Related Topics:")
+    let related = knowledge_related("quantum mechanics")
+    for concept in related {
+        print("  →", concept)
+    }
+}
+
+fn print_fact(fact, number) {
+    // Verified facts have a checkmark
+    let status = if fact["verified"] == true then "✓" else "?"
+    
+    print(number + ". " + status + " " + fact["title"])
+    print("   " + fact["summary"])
+    print("   Confidence: " + fact["confidence"] * 100 + "%")
+    print("")
+}
+
+main()
+

@@ -1,0 +1,14 @@
+Storage_Tier,Type,Capacity_TB,Cost_per_TB_USD,Total_Cost_USD,IOPS,Throughput_GBps,Latency,Use_Cases
+Hot,NVMe_SSD,500,300,150000,15000000,50,"<100μs","Active training datasets, model checkpoints, real-time inference cache"
+Warm,SATA_SSD,2000,140,280000,500000,6,"<1ms","Recent training runs, model versioning, evaluation datasets, user uploads"
+Cold,HDD,3000,15,45000,10000,0.5,"<10ms","Historical training data, long-term backups, compliance archives, research datasets"
+TOTAL,,5500,,475000,,,,Total storage capacity: 5.5 PB
+Hot_Usage_Percentage,,9.1%,,,,,,"Hot tier optimized for speed (9.1% of total capacity, 31.6% of cost)"
+Warm_Usage_Percentage,,36.4%,,,,,,"Warm tier balanced (36.4% of capacity, 58.9% of cost)"
+Cold_Usage_Percentage,,54.5%,,,,,,"Cold tier optimized for cost (54.5% of capacity, 9.5% of cost)"
+Avg_Cost_per_TB,,86.36,,,,,,Average cost across all tiers
+Monthly_Storage_Cost,,39583,,,,,,Amortized over 36 months ($475K / 36)
+Annual_Storage_Cost,,475000,,,,,,Total storage CapEx (Year 0)
+Lifecycle_Policy_Savings,,,,,,,,"Implement S3-style lifecycle policies: Hot→Warm after 30 days, Warm→Cold after 90 days"
+Optimized_Annual_Cost,,332500,,142500,30%,,,Savings from tiering and compression
+

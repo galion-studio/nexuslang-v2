@@ -1,0 +1,197 @@
+groups:
+  - name: galion_critical
+    interval: 30s
+    rules:
+      # ==================== SYSTEM ALERTS ====================
+      
+      # High memory usage (>90%)
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Server memory critically high"
+          description: "Memory usage is {{ $value | humanize }}% (threshold: 90%)"
+          
+      # High CPU usage (>80%)
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Server CPU usage high"
+          description: "CPU usage is {{ $value | humanize }}% for more than 10 minutes"
+      
+      # Disk space low (<15%)
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Disk space critically low"
+          description: "Only {{ $value | humanize }}% disk space remaining on root partition"
+          
+      # ==================== APPLICATION ALERTS ====================
+      
+      # API down
+      - alert: APIDown
+        expr: up{job=~"app-api|studio-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "API service is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute"
+          
+      # High API error rate
+      - alert: HighAPIErrorRate
+        expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High API error rate"
+          description: "{{ $value | humanize }}% of requests are returning 5xx errors"
+      
+      # High API latency (>1s p99)
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "API latency degraded"
+          description: "P99 latency is {{ $value | humanize }}s (threshold: 1s)"
+      
+      # ==================== DATABASE ALERTS ====================
+      
+      # Database down
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "Database has been unreachable for more than 1 minute"
+      
+      # Database connection exhaustion
+      - alert: DatabaseConnectionsHigh
+        expr: (pg_stat_database_numbackends / pg_settings_max_connections) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Database connections near limit"
+          description: "Using {{ $value | humanize }}% of max connections"
+      
+      # Long-running queries
+      - alert: LongRunningQueries
+        expr: pg_stat_activity_max_tx_duration{datname!~"template.*|postgres"} > 300
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Long-running database queries detected"
+          description: "Query running for {{ $value | humanize }}s on {{ $labels.datname }}"
+      
+      # ==================== REDIS ALERTS ====================
+      
+      # Redis down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been unreachable for more than 1 minute"
+      
+      # Redis memory usage high
+      - alert: RedisMemoryHigh
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis using {{ $value | humanize }}% of max memory"
+      
+      # ==================== CONTAINER ALERTS ====================
+      
+      # Container restarting frequently
+      - alert: ContainerRestarting
+        expr: rate(container_last_seen{name=~"galion-.*"}[5m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Container restarting frequently"
+          description: "Container {{ $labels.name }} is restarting frequently"
+      
+      # Container memory limit reached
+      - alert: ContainerMemoryLimit
+        expr: (container_memory_usage_bytes{name=~"galion-.*"} / container_spec_memory_limit_bytes{name=~"galion-.*"}) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Container near memory limit"
+          description: "Container {{ $labels.name }} using {{ $value | humanize }}% of memory limit"
+      
+      # ==================== BACKUP ALERTS ====================
+      
+      # Backup failed (requires custom exporter or push gateway)
+      - alert: BackupFailed
+        expr: time() - galion_last_successful_backup_timestamp > 86400
+        for: 1h
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Database backup failed"
+          description: "No successful backup in the last 24 hours"
+
+  - name: galion_business
+    interval: 60s
+    rules:
+      # ==================== BUSINESS METRICS ====================
+      
+      # High concurrent users (scale trigger)
+      - alert: HighConcurrentUsers
+        expr: galion_active_users > 500
+        for: 15m
+        labels:
+          severity: info
+          team: platform
+        annotations:
+          summary: "High concurrent users - consider scaling"
+          description: "{{ $value }} active users (threshold: 500). Consider horizontal scaling."
+      
+      # Low cache hit rate
+      - alert: LowCacheHitRate
+        expr: (redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) * 100 < 50
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Redis cache hit rate low"
+          description: "Cache hit rate is {{ $value | humanize }}% (threshold: 50%). Review caching strategy."
+

@@ -1,0 +1,103 @@
+{
+  "monitors": [
+    {
+      "name": "Nexus API - Health Check",
+      "type": "http",
+      "url": "https://api.galion.app/health",
+      "interval": 300,
+      "timeout": 30,
+      "http_method": "GET",
+      "expected_status_codes": [200],
+      "alert_contacts": ["email", "discord"],
+      "description": "Main API health endpoint"
+    },
+    {
+      "name": "Nexus Frontend",
+      "type": "http",
+      "url": "https://galion.app",
+      "interval": 300,
+      "timeout": 30,
+      "http_method": "GET",
+      "expected_status_codes": [200],
+      "alert_contacts": ["email", "discord"],
+      "description": "Frontend application"
+    },
+    {
+      "name": "NexusLang IDE",
+      "type": "http",
+      "url": "https://nexuslang.dev",
+      "interval": 300,
+      "timeout": 30,
+      "http_method": "GET",
+      "expected_status_codes": [200],
+      "alert_contacts": ["email"],
+      "description": "IDE application"
+    },
+    {
+      "name": "API - Auth Endpoint",
+      "type": "http",
+      "url": "https://api.galion.app/api/v2/auth/me",
+      "interval": 600,
+      "timeout": 30,
+      "http_method": "GET",
+      "expected_status_codes": [401],
+      "alert_contacts": ["email"],
+      "description": "Auth endpoint (401 expected without token)"
+    },
+    {
+      "name": "PostgreSQL Database",
+      "type": "port",
+      "host": "YOUR_VPS_IP",
+      "port": 5432,
+      "interval": 300,
+      "timeout": 30,
+      "alert_contacts": ["email", "discord"],
+      "description": "PostgreSQL database port"
+    },
+    {
+      "name": "Redis Cache",
+      "type": "port",
+      "host": "YOUR_VPS_IP",
+      "port": 6379,
+      "interval": 300,
+      "timeout": 30,
+      "alert_contacts": ["email"],
+      "description": "Redis cache port"
+    },
+    {
+      "name": "SSH Access",
+      "type": "port",
+      "host": "YOUR_VPS_IP",
+      "port": 22,
+      "interval": 600,
+      "timeout": 30,
+      "alert_contacts": ["email"],
+      "description": "SSH access to VPS"
+    }
+  ],
+  "alert_contacts": [
+    {
+      "name": "email",
+      "type": 2,
+      "value": "admin@galion.app"
+    },
+    {
+      "name": "discord",
+      "type": 11,
+      "value": "DISCORD_WEBHOOK_URL"
+    },
+    {
+      "name": "slack",
+      "type": 5,
+      "value": "SLACK_WEBHOOK_URL"
+    }
+  ],
+  "status_page": {
+    "enabled": true,
+    "subdomain": "status",
+    "custom_domain": "status.galion.app",
+    "monitors": ["all"],
+    "sort": 1
+  }
+}
+

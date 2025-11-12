@@ -1,0 +1,104 @@
+version: '3.8'
+
+# Minimal Docker Compose - Core Infrastructure Only
+# This file starts only the services that exist and don't require building
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: galion-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-galion}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
+      POSTGRES_DB: ${POSTGRES_DB:-galion}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./backups:/backups
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-galion}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - galion-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: galion-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-changeme123}
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - ./data/redis:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - galion-network
+
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    container_name: galion-pgbouncer
+    restart: unless-stopped
+    environment:
+      DATABASES_HOST: postgres
+      DATABASES_PORT: 5432
+      DATABASES_USER: ${POSTGRES_USER:-galion}
+      DATABASES_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
+      PGBOUNCER_POOL_MODE: transaction
+      PGBOUNCER_MAX_CLIENT_CONN: 1000
+      PGBOUNCER_DEFAULT_POOL_SIZE: 25
+      PGBOUNCER_RESERVE_POOL_SIZE: 5
+      PGBOUNCER_MAX_DB_CONNECTIONS: 100
+      PGBOUNCER_SERVER_IDLE_TIMEOUT: 600
+      PGBOUNCER_LISTEN_PORT: 6432
+    ports:
+      - "127.0.0.1:6432:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - galion-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: galion-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data/prometheus:/prometheus
+    ports:
+      - "127.0.0.1:9091:9090"
+    networks:
+      - galion-network
+
+networks:
+  galion-network:
+    driver: bridge
+    name: galion-network
+
+volumes:
+  postgres:
+  redis:
+  prometheus:
+

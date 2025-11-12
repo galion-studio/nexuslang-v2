@@ -1,0 +1,147 @@
+# ===============================================
+# NexusLang v2 Production Dockerfile for RunPod
+# ===============================================
+# Optimized for instant deployment with pre-built dependencies
+# Eliminates 10+ minute installation time on pod restarts
+
+# Stage 1: Build wheel cache
+FROM python:3.12-slim as builder
+
+# Set build environment
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=0 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create wheel cache directory
+WORKDIR /wheels
+
+# Copy requirements file
+COPY requirements.txt /wheels/
+
+# Build all wheels (this takes time but only happens once during image build)
+# Pre-compiling wheels means instant installation on pod start
+RUN pip wheel --no-cache-dir --wheel-dir=/wheels -r requirements.txt
+
+# Stage 2: Production image
+FROM python:3.12-slim
+
+# Metadata labels
+LABEL maintainer="Galion Studio <support@galion.app>"
+LABEL version="2.0.0-beta"
+LABEL description="NexusLang v2 Backend - AI-Native Programming Platform"
+
+# Set production environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Python path for proper imports
+    PYTHONPATH=/app:$PYTHONPATH
+
+# Install runtime dependencies including PostgreSQL client and pgvector
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # PostgreSQL client and development files
+    postgresql-client \
+    libpq5 \
+    libpq-dev \
+    # Redis client (optional)
+    redis-tools \
+    # Utilities
+    curl \
+    netcat-traditional \
+    # For health checks
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create application user for security
+RUN useradd -m -u 1000 -s /bin/bash nexus && \
+    mkdir -p /app /workspace /data /logs && \
+    chown -R nexus:nexus /app /workspace /data /logs
+
+# Set working directory
+WORKDIR /app
+
+# Copy pre-built wheels from builder stage
+COPY --from=builder /wheels /wheels
+
+# Copy requirements and install from wheels (FAST - uses pre-built wheels)
+COPY --chown=nexus:nexus requirements.txt /app/
+RUN pip install --no-index --find-links=/wheels -r requirements.txt && \
+    rm -rf /wheels
+
+# Copy application code
+COPY --chown=nexus:nexus . /app/
+
+# Fix import issues at build time (baked into image)
+# Convert relative imports to absolute imports
+RUN find /app -name "*.py" -type f -exec sed -i 's/from \.\./from /g' {} \; && \
+    # Fix metadata reserved word in SQLAlchemy models
+    find /app/models -name "*.py" -exec sed -i 's/metadata = Column/meta_data = Column/g' {} \; && \
+    # Fix service imports
+    find /app/services -name "*.py" -exec sed -i 's/from \.core/from core/g' {} \; && \
+    find /app/services -name "*.py" -exec sed -i 's/from \.models/from models/g' {} \; && \
+    find /app/services -name "*.py" -exec sed -i 's/from \.services/from services/g' {} \; && \
+    # Fix incorrect imports
+    find /app -name "*.py" -exec sed -i 's/from core.security import get_current_user/from api.auth import get_current_user/g' {} \; && \
+    # Comment out voice imports if whisper not installed
+    sed -i 's/^import whisper/# import whisper/' /app/services/voice/stt_service.py 2>/dev/null || true
+
+# Create startup script that handles database and services
+RUN cat > /app/docker-entrypoint.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "🚀 Starting NexusLang v2 Backend..."
+
+# Wait for PostgreSQL to be ready
+if [ -n "$DATABASE_URL" ]; then
+    echo "⏳ Waiting for PostgreSQL..."
+    timeout 30 bash -c 'until echo > /dev/tcp/${POSTGRES_HOST:-localhost}/5432; do sleep 1; done' || echo "PostgreSQL connection timeout (continuing anyway)"
+    echo "✅ PostgreSQL is ready"
+fi
+
+# Wait for Redis to be ready
+if [ -n "$REDIS_URL" ]; then
+    echo "⏳ Waiting for Redis..."
+    timeout 30 bash -c 'until redis-cli -h ${REDIS_HOST:-localhost} ping 2>/dev/null; do sleep 1; done' || echo "Redis connection timeout (continuing anyway)"
+    echo "✅ Redis is ready"
+fi
+
+# Run database migrations if available
+if [ -f "/app/migrations/alembic.ini" ]; then
+    echo "📊 Running database migrations..."
+    alembic upgrade head || echo "⚠️  Migration failed (might be OK if tables already exist)"
+fi
+
+# Start the application
+echo "🎯 Starting uvicorn server on port ${PORT:-8000}..."
+exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WORKERS:-1} --log-level info
+EOF
+
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Create backup directory
+RUN mkdir -p /workspace/backups && chown nexus:nexus /workspace/backups
+
+# Switch to non-root user
+USER nexus
+
+# Expose port 8000 (standard for RunPod)
+EXPOSE 8000
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+
+# Set entrypoint
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+

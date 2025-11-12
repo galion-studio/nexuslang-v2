@@ -1,0 +1,24 @@
+Category,Item,Monthly_Cost_USD,Annual_Cost_USD,Notes
+Facilities,Data Center Lease,40000,480000,"Tier 3 data center, 2 MW capacity"
+Utilities,Electricity (2 MW @ $0.10/kWh),144000,1728000,"24/7 operation, ~730 hours/month"
+Utilities,Internet Bandwidth (10 Gbps),1000,12000,Dedicated fiber line for data transfer
+Cloud_Services,AWS S3 Backup Storage,2000,24000,50 TB offsite backups (Glacier Deep Archive)
+Cloud_Services,CloudFront CDN,2000,24000,"50 GB transfer/month, global edge locations"
+APIs,OpenAI API (Whisper + GPT-4),5000,60000,"5K voice minutes/month, 2.5M tokens/month"
+APIs,ElevenLabs TTS,11250,135000,"750K characters/month ($0.18/1K chars)"
+Software_Licenses,Kubernetes Enterprise Support,5000,60000,Red Hat OpenShift or Rancher Enterprise
+Software_Licenses,Monitoring & Logging Tools,3333,40000,"Prometheus, Grafana, ELK stack licenses"
+Software_Licenses,Security Tools (WAF/IDS/IPS),4167,50000,"Cloudflare WAF, Suricata, Wazuh licenses"
+Software_Licenses,Backup Software (Veeam),2500,30000,Enterprise backup and disaster recovery
+Personnel,ML Engineers (4× $180K),60000,720000,"Training models, hyperparameter tuning"
+Personnel,DevOps Engineers (2× $160K),26667,320000,"Infrastructure, Kubernetes, CI/CD"
+Personnel,Backend Engineers (3× $150K),37500,450000,"API development, microservices"
+Personnel,Data Engineers (2× $140K),23333,280000,"Data pipelines, ETL, preprocessing"
+Personnel,Security Engineer (1× $170K),14167,170000,"Security audits, compliance, incident response"
+Insurance,General Liability Insurance,2500,30000,Coverage for data center equipment
+Insurance,Cyber Insurance,2083,25000,"Data breach coverage, ransomware protection"
+Legal,Legal & Compliance,5000,60000,"GDPR/CCPA compliance, contracts, audits"
+Miscellaneous,Hardware Maintenance (5% of CapEx),18042,216500,Replacement parts and warranty extensions
+Miscellaneous,Contingency Buffer (10%),36700,440400,Unexpected costs and emergency repairs
+TOTAL,,445242,5345900,Total Annual Operating Expenses
+

@@ -1,0 +1,54 @@
+# Cloudflare Tunnel Configuration for galion.studio  
+# B2B Collaborative Workspace Platform
+
+ingress:
+  # Main website - Collaborative workspace frontend
+  - hostname: galion.studio
+    service: http://localhost:3200
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # WWW subdomain
+  - hostname: www.galion.studio
+    service: http://localhost:3200
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # API subdomain - Backend API
+  - hostname: api.galion.studio
+    service: http://localhost:8200
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # WebSocket for real-time collaboration
+  - hostname: ws.galion.studio
+    service: http://localhost:8200
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # Team dashboard
+  - hostname: dashboard.galion.studio
+    service: http://localhost:3200
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # Analytics endpoint
+  - hostname: analytics.galion.studio
+    service: http://localhost:8200
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # Catch-all rule - Required by Cloudflare
+  - service: http_status:404

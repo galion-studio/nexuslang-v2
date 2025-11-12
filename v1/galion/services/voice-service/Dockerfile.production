@@ -1,0 +1,83 @@
+# Production Dockerfile for Voice Service with GPU support
+# Includes Faster-Whisper, XTTS v2, and Llama 3.1 8B
+
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    CUDA_HOME=/usr/local/cuda \
+    PATH=/usr/local/cuda/bin:$PATH \
+    LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3.11-dev \
+    python3-pip \
+    git \
+    wget \
+    curl \
+    ffmpeg \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.11 as default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+
+# Upgrade pip
+RUN python -m pip install --upgrade pip setuptools wheel
+
+# Create app directory
+WORKDIR /app
+
+# Copy requirements first (for layer caching)
+COPY requirements.txt .
+COPY requirements-production.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir -r requirements-production.txt
+
+# Install Faster-Whisper (CTranslate2 optimized)
+RUN pip install --no-cache-dir faster-whisper==0.10.0
+
+# Install XTTS v2 (Coqui TTS)
+RUN pip install --no-cache-dir TTS==0.20.0
+
+# Install vLLM for Llama 3.1 8B
+RUN pip install --no-cache-dir vllm==0.2.7
+
+# Install additional ML libraries
+RUN pip install --no-cache-dir \
+    torch==2.1.0 \
+    torchaudio==2.1.0 \
+    transformers==4.35.0 \
+    accelerate==0.24.1 \
+    bitsandbytes==0.41.3
+
+# Copy application code
+COPY app/ /app/app/
+
+# Create directories for models and cache
+RUN mkdir -p /app/models /app/cache /tmp/voice-cache
+
+# Set permissions
+RUN chmod -R 755 /app
+
+# Download models at build time (optional, can be done at runtime)
+# Uncomment to bake models into image (increases image size)
+# RUN python -c "from faster_whisper import WhisperModel; WhisperModel('medium.en', device='cpu', compute_type='int8')"
+# RUN python -c "from TTS.api import TTS; TTS('tts_models/multilingual/multi-dataset/xtts_v2')"
+
+# Expose port
+EXPOSE 8003
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8003/health || exit 1
+
+# Run application
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003", "--workers", "1"]
+

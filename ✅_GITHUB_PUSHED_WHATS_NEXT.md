@@ -252,11 +252,11 @@ watch -n 10 'curl -s http://localhost:8000/health | jq .'
 
 ## ⚡ QUICK REFERENCE
 
-**Your OpenAI Key** (for RunPod setup):
-```
-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
-```
-(This is stored only in your environment on RunPod, NOT in git)
+**Your API Keys** (for RunPod setup):
+- OpenRouter Key (primary): Get from https://openrouter.ai/keys
+- OpenAI Key (optional): Get from https://platform.openai.com/api-keys
+
+(Keys are stored only in environment on RunPod, NOT in git)
 
 **Your Repositories:**
 - Private: `galion-studio/nexuslang-v2` (full code)

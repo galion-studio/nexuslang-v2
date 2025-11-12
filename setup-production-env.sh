@@ -30,13 +30,27 @@ GRAFANA_PASSWORD=$(openssl rand -hex 16)
 echo "✅ Secrets generated"
 echo ""
 
-# Get OpenAI API key
-echo "Enter your OpenAI API key (starts with sk-proj-):"
-read -r OPENAI_API_KEY
+# Get OpenRouter API key (Primary AI gateway)
+echo "Enter your OpenRouter API key (starts with sk-or-v1-):"
+echo "(OpenRouter provides access to 30+ models including Claude, GPT-4, Llama)"
+read -r OPENROUTER_API_KEY
 
-if [ -z "$OPENAI_API_KEY" ]; then
-    echo "⚠️  No OpenAI key provided - AI features will be limited"
-    OPENAI_API_KEY="sk-proj-YOUR_KEY_HERE"
+if [ -z "$OPENROUTER_API_KEY" ]; then
+    echo "⚠️  No OpenRouter key provided"
+    echo "Enter OpenAI API key instead (starts with sk-proj-):"
+    read -r OPENAI_API_KEY
+    if [ -z "$OPENAI_API_KEY" ]; then
+        echo "⚠️  No AI keys provided - AI features will be limited"
+        OPENROUTER_API_KEY="sk-or-v1-YOUR_KEY_HERE"
+        OPENAI_API_KEY="sk-proj-YOUR_KEY_HERE"
+    fi
+else
+    # OpenRouter can use OpenAI key for routing
+    echo "Enter OpenAI API key (optional, for OpenRouter routing):"
+    read -r OPENAI_API_KEY
+    if [ -z "$OPENAI_API_KEY" ]; then
+        OPENAI_API_KEY="sk-proj-YOUR_KEY_HERE"
+    fi
 fi
 
 echo ""
@@ -79,11 +93,13 @@ REDIS_PORT=6379
 REDIS_DB=0
 REDIS_URL=redis://:$REDIS_PASSWORD@redis:6379/0
 
-# AI Services
+# AI Services - OpenRouter Primary (99% of use cases)
+OPENROUTER_API_KEY=$OPENROUTER_API_KEY
 OPENAI_API_KEY=$OPENAI_API_KEY
-OPENROUTER_API_KEY=
+AI_PROVIDER=openrouter
 DEFAULT_AI_MODEL=anthropic/claude-3.5-sonnet
 FALLBACK_AI_MODEL=openai/gpt-4-turbo
+FAST_AI_MODEL=openai/gpt-3.5-turbo
 
 # Voice (GPU on RunPod)
 WHISPER_MODEL=base

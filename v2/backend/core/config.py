@@ -47,22 +47,26 @@ class Settings(BaseSettings):
     # Elasticsearch
     ELASTICSEARCH_URL: str = "http://elasticsearch:9200"
     
-    # AI Configuration - OpenRouter as Primary Gateway
-    # OpenRouter provides access to multiple AI models through one API
+    # AI Configuration - OpenRouter as Primary Gateway (99% of use cases)
+    # OpenRouter provides access to 30+ AI models through one unified API
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_APP_NAME: str = "NexusLang v2"
+    OPENROUTER_SITE_URL: str = "https://developer.galion.app"
     
-    # Default AI models (can be changed per request)
-    DEFAULT_AI_MODEL: str = "anthropic/claude-3.5-sonnet"  # Primary model
-    FALLBACK_AI_MODEL: str = "openai/gpt-4-turbo"  # Fallback if primary fails
-    FAST_AI_MODEL: str = "openai/gpt-3.5-turbo"  # For quick tasks
+    # AI Provider Selection - OpenRouter is primary
+    AI_PROVIDER: str = "openrouter"  # 99% of use cases
     
-    # OpenAI (fallback/direct access when needed)
+    # Default AI models (all accessed via OpenRouter)
+    DEFAULT_AI_MODEL: str = "anthropic/claude-3.5-sonnet"  # Best reasoning
+    FALLBACK_AI_MODEL: str = "openai/gpt-4-turbo"  # Fallback
+    FAST_AI_MODEL: str = "openai/gpt-3.5-turbo"  # Quick tasks
+    CODE_AI_MODEL: str = "meta-llama/codellama-70b-instruct"  # Code generation
+    
+    # OpenAI (optional - only for direct access or fallback)
+    # Not required if using OpenRouter
     OPENAI_API_KEY: str = ""
     OPENAI_ORG_ID: str = ""
-    
-    # AI Provider Selection
-    AI_PROVIDER: str = "openrouter"  # Options: "openrouter", "openai", "auto"
     
     # Shopify (optional)
     SHOPIFY_API_KEY: str = ""

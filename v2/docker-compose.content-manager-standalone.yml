@@ -1,0 +1,144 @@
+# Content Manager - Standalone Deployment
+# Simple, fast, no dependencies on existing services
+# Following Musk's principles: Ship simple, add complexity later
+
+version: '3.8'
+
+networks:
+  content-manager:
+    driver: bridge
+
+services:
+  # ==================== POSTGRES (Dedicated for Content Manager) ====================
+  content-postgres:
+    image: postgres:15-alpine
+    container_name: content-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: contentmgr
+      POSTGRES_PASSWORD: ${CONTENT_DB_PASSWORD:-contentmgr_secure_123}
+      POSTGRES_DB: content_manager
+    volumes:
+      - content-db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # Different port to not conflict with Galion
+    networks:
+      - content-manager
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U contentmgr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== REDIS (Dedicated for Content Manager) ====================
+  content-redis:
+    image: redis:7-alpine
+    container_name: content-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${CONTENT_REDIS_PASSWORD:-contentredis_secure_123}
+    ports:
+      - "6380:6379"  # Different port to not conflict
+    volumes:
+      - content-redis-data:/data
+    networks:
+      - content-manager
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== BACKEND API ====================
+  content-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.content-manager
+    container_name: content-backend
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_URL: postgresql://contentmgr:${CONTENT_DB_PASSWORD:-contentmgr_secure_123}@content-postgres:5432/content_manager
+      
+      # Redis
+      REDIS_URL: redis://:${CONTENT_REDIS_PASSWORD:-contentredis_secure_123}@content-redis:6379/0
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_ALGORITHM: HS256
+      
+      # CORS
+      CORS_ORIGINS: '["http://localhost:3200","http://localhost:3100","https://content.galion.app"]'
+      
+      # Application
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      
+      # Storage
+      STORAGE_TYPE: local
+      MEDIA_STORAGE_PATH: /app/media
+      
+      # API Keys for platforms (from user's .env)
+      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
+      REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
+      TWITTER_BEARER_TOKEN: ${TWITTER_BEARER_TOKEN:-}
+      TWITTER_API_KEY: ${TWITTER_API_KEY:-}
+      TWITTER_API_SECRET: ${TWITTER_API_SECRET:-}
+      DEVTO_API_KEY: ${DEVTO_API_KEY:-}
+      INSTAGRAM_ACCESS_TOKEN: ${INSTAGRAM_ACCESS_TOKEN:-}
+      FACEBOOK_ACCESS_TOKEN: ${FACEBOOK_ACCESS_TOKEN:-}
+      LINKEDIN_ACCESS_TOKEN: ${LINKEDIN_ACCESS_TOKEN:-}
+      
+    volumes:
+      - ./backend:/app
+      - content-media:/app/media
+    ports:
+      - "8200:8000"  # Different port for content manager
+    depends_on:
+      content-postgres:
+        condition: service_healthy
+      content-redis:
+        condition: service_healthy
+    networks:
+      - content-manager
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== FRONTEND ====================
+  content-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: content-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8200
+      NEXT_PUBLIC_WS_URL: ws://localhost:8200
+      NEXT_TELEMETRY_DISABLED: 1
+      PORT: 3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3200:3000"  # Different port for content manager
+    depends_on:
+      - content-backend
+    networks:
+      - content-manager
+    command: npm run dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  content-db-data:
+  content-redis-data:
+  content-media:
+

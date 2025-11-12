@@ -1,0 +1,41 @@
+// Example 6: Voice-First Interaction
+// Native text-to-speech and speech-to-text
+
+fn main() {
+    print("=== Voice Interaction Demo ===")
+    print("")
+    
+    // Voice output with emotion
+    say("Hello! I'm your NexusLang AI assistant.", emotion="friendly")
+    print("🎤 AI: Hello! I'm your NexusLang AI assistant.")
+    print("")
+    
+    // Different emotions
+    say("This is exciting news!", emotion="excited")
+    print("🎤 AI [excited]: This is exciting news!")
+    print("")
+    
+    say("Let me think about that carefully.", emotion="thoughtful")
+    print("🎤 AI [thoughtful]: Let me think about that carefully.")
+    print("")
+    
+    say("I apologize for any confusion.", emotion="apologetic")
+    print("🎤 AI [apologetic]: I apologize for any confusion.")
+    print("")
+    
+    // Voice speed control
+    say("I can speak faster if you prefer.", speed=1.5)
+    print("🎤 AI [fast]: I can speak faster if you prefer.")
+    print("")
+    
+    print("📝 Note: Voice features use:")
+    print("  - OpenAI Whisper for speech-to-text")
+    print("  - Coqui TTS for text-to-speech")
+    print("  - Custom voice cloning available")
+    print("")
+    
+    print("✅ Voice system ready!")
+}
+
+main()
+

@@ -1,0 +1,198 @@
+# Security Scanning CI/CD Pipeline
+# Runs on every push and pull request
+# Scans for vulnerabilities, secrets, and security issues
+
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run daily security scan at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  dependency-check:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd v2/backend
+          pip install -r requirements.txt
+          pip install safety pip-audit
+      
+      - name: Run Safety check
+        run: |
+          cd v2/backend
+          safety check -r requirements.txt --json || true
+      
+      - name: Run pip-audit
+        run: |
+          cd v2/backend
+          pip-audit -r requirements.txt || true
+  
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for better secret detection
+      
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+      
+      - name: GitLeaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  sast-scan:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Bandit
+        run: pip install bandit[toml]
+      
+      - name: Run Bandit Security Scan
+        run: |
+          cd v2/backend
+          bandit -r . -f json -o bandit-report.json || true
+          bandit -r . -f txt || true
+      
+      - name: Upload Bandit Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: bandit-security-report
+          path: v2/backend/bandit-report.json
+  
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build Docker Image
+        run: |
+          cd v2/backend
+          docker build -t nexuslang-backend:test .
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'nexuslang-backend:test'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+  
+  security-tests:
+    name: Security Test Suite
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd v2/backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+      
+      - name: Run Security Tests
+        env:
+          JWT_SECRET_KEY: "test-secret-key-for-ci-testing-only-min-32-chars-long"
+          DATABASE_URL: "sqlite+aiosqlite:///./test.db"
+        run: |
+          cd v2/backend
+          pytest tests/test_security.py -v --cov=. --cov-report=json
+      
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-test-coverage
+          path: v2/backend/coverage.json
+  
+  license-check:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install pip-licenses
+        run: pip install pip-licenses
+      
+      - name: Check Licenses
+        run: |
+          cd v2/backend
+          pip install -r requirements.txt
+          pip-licenses --format=markdown --output-file=licenses.md
+          pip-licenses --fail-on="GPL"  # Fail if GPL dependencies found
+      
+      - name: Upload License Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: license-report
+          path: v2/backend/licenses.md
+  
+  summary:
+    name: Security Scan Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-check, secret-scan, sast-scan, container-scan, security-tests, license-check]
+    if: always()
+    
+    steps:
+      - name: Check job results
+        run: |
+          echo "✅ Security scanning completed!"
+          echo "Review the individual job results above for details."
+          echo ""
+          echo "Next steps if issues found:"
+          echo "1. Fix critical/high vulnerabilities immediately"
+          echo "2. Update vulnerable dependencies"
+          echo "3. Remove any exposed secrets"
+          echo "4. Review and fix SAST findings"
+

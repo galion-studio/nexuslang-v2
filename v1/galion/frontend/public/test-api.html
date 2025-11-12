@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test - Galion.app</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: white;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        #result {
+            background: #2d2d44;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Galion.app API Connection Test</h1>
+    <p>This page tests if your frontend can connect to the backend services.</p>
+    
+    <button onclick="testHealth()">Test Health Endpoint</button>
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="clearCache()">Clear Cache & Reload</button>
+    
+    <div id="result"></div>
+
+    <script>
+        const AUTH_URL = 'http://localhost:8100';
+        const resultDiv = document.getElementById('result');
+
+        function log(message, isError = false) {
+            const className = isError ? 'error' : 'success';
+            resultDiv.innerHTML += `<div class="${className}">${new Date().toLocaleTimeString()} - ${message}</div>`;
+        }
+
+        async function testHealth() {
+            resultDiv.innerHTML = '';
+            log('Testing health endpoint...');
+            
+            try {
+                const response = await fetch(`${AUTH_URL}/health`, {
+                    method: 'GET',
+                    mode: 'cors',
+                });
+                
+                const data = await response.json();
+                log(`✅ SUCCESS! Status: ${response.status}`);
+                log(`Response: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                log(`❌ ERROR: ${error.message}`, true);
+                log(`This usually means CORS is blocking the request or the server is not running.`, true);
+            }
+        }
+
+        async function testLogin() {
+            resultDiv.innerHTML = '';
+            log('Testing login endpoint...');
+            
+            try {
+                const response = await fetch(`${AUTH_URL}/api/v1/auth/login`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@galion.app',
+                        password: 'Admin123!'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`✅ LOGIN SUCCESS!`);
+                log(`Token: ${data.data.token.substring(0, 50)}...`);
+                log(`User: ${data.data.user.name} (${data.data.user.email})`);
+                log(`Role: ${data.data.user.role}`);
+                log(`\n🎉 Backend is working perfectly!`);
+            } catch (error) {
+                log(`❌ LOGIN ERROR: ${error.message}`, true);
+                if (error.message.includes('Failed to fetch')) {
+                    log(`\nPossible causes:`, true);
+                    log(`1. CORS is blocking the request`, true);
+                    log(`2. Auth service is not running on port 8100`, true);
+                    log(`3. Network/firewall blocking the connection`, true);
+                }
+            }
+        }
+
+        function clearCache() {
+            log('Clearing cache and reloading...');
+            setTimeout(() => {
+                location.reload(true);
+            }, 500);
+        }
+
+        // Auto-test on load
+        window.onload = () => {
+            log('🚀 API Test Page Loaded');
+            log(`Testing connection to: ${AUTH_URL}`);
+        };
+    </script>
+</body>
+</html>
+

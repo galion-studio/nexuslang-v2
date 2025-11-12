@@ -1,0 +1,76 @@
+# Simplified Docker Compose for testing Cloudflare Tunnels
+# This version starts basic services without the heavy ML backend
+
+version: '3.8'
+
+networks:
+  nexus-network:
+    driver: bridge
+
+services:
+  # Simple frontend placeholder
+  frontend:
+    image: nginx:alpine
+    container_name: nexus-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - nexus-network
+    volumes:
+      - ./v2/frontend:/usr/share/nginx/html:ro
+
+  # Simple backend placeholder  
+  backend:
+    image: nginx:alpine
+    container_name: nexus-backend
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    networks:
+      - nexus-network
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: nexus-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    networks:
+      - nexus-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nexus-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3001:3000"
+    networks:
+      - nexus-network
+
+  # Cloudflare Tunnels
+  cloudflared-studio:
+    image: cloudflare/cloudflared:latest
+    container_name: nexus-cloudflared-studio
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token eyJ6b25lSUQiOiIyZmY1YzEwYTExZDhhOTUyNzZkMGI4NGFhZjUzZGYxYiIsImFjY291bnRJRCI6IjU3MTNmNGZjZGUxOGJkNDhhNDU2YWZiYjFiODE1NWVkIiwic2VydmljZUtleSI6InYxLjAtNTZlNDFlMzA1ZDRjYWZlYjQ4MDQ0YmExLWU3OTNiMDhmZDQ2N2VkMWUyYzkzODM1NWJiMjk0ZTg0YWI3YWIzZDRmYWYwZGI1NGNlMGVhZTg0MmNjMTM1OTY3MTg3ZTUzZDRhYzEzMWUyYWEzMjBkYTdlYzFiYjlkZGVkMzEzNjBiZDc5ZmQ2NjUyOTMyN2FkYzUxZWI4MGZlNmUzZDcxZTc4YmVhN2Q4YmU4OWY4OGYyZmExOWUxMWIiLCJhcGlUb2tlbiI6IndrazRIdEVrbG5naG4zNlZxQzdmcmVVMERPeTVZRUJpdmxlZnoxR08ifQ==
+    networks:
+      - nexus-network
+    depends_on:
+      - frontend
+      - backend
+
+  cloudflared-app:
+    image: cloudflare/cloudflared:latest
+    container_name: nexus-cloudflared-app
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token eyJ6b25lSUQiOiIwMjI2NTFjN2RmZGVhNDhlMzc2YzQ4NzlmZmVkOTA0YiIsImFjY291bnRJRCI6IjU3MTNmNGZjZGUxOGJkNDhhNDU2YWZiYjFiODE1NWVkIiwic2VydmljZUtleSI6InYxLjAtNGU0MmU1MDA1MDgxYjZjMmI4ZjVmN2Q5LTc3ZTZmMmRkMWVjNDJiYmM2ZDkxMWRhZjdhMzBiZWRkYzIzYWRiZGIwYjFlMzA3N2ZmMTc2MTNiZGFhM2I3MDdmNGRmY2IzMjVmNjBlZGNhOTcxYTUzOTIzYTJlM2U2MzIzZDNjYmQzNzk4NzkxYWE4NTc5ZTdiZGViZGFhYjY4MTE2ZmNkYzk3Y2U1YzU2MzMzNDMxYTQwOWNhM2Y5NGUiLCJhcGlUb2tlbiI6Ikt1Z2RBYVRXZ2tncTFnVmVpenh3OFgyZ2ZHU19QOTNkcWhvUTVieHoifQ==
+    networks:
+      - nexus-network
+    depends_on:
+      - frontend
+      - backend
+

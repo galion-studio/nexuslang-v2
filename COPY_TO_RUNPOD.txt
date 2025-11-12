@@ -1,0 +1,50 @@
+==============================================
+COPY THESE COMMANDS TO YOUR RUNPOD TERMINAL
+==============================================
+
+# === STEP 1: Pull Latest Code ===
+cd /workspace/nexuslang-v2
+git pull origin main
+
+# === STEP 2: Make Scripts Executable ===
+chmod +x deploy_runpod_instant.sh
+chmod +x configure_volumes.sh
+chmod +x v2/backend/build_docker.sh
+chmod +x v2/backend/recovery.py
+chmod +x v2/backend/scripts/*.py
+
+# === STEP 3: Install psutil (needed for health checks) ===
+pip install psutil
+
+# === STEP 4: Run Recovery ===
+python recovery.py
+
+# === STEP 5: Apply Analytics Migration ===
+cd /workspace/nexuslang-v2/v2/backend
+sudo -u postgres psql -d nexus_v2 -f migrations/003_analytics.sql
+
+# === STEP 6: Restart Server with Analytics ===
+pkill -f uvicorn
+nohup python run_server.py > /tmp/nexus.log 2>&1 &
+sleep 5
+
+# === STEP 7: Test Everything ===
+curl http://localhost:8000/health
+curl http://localhost:8000/health/detailed | python -m json.tool
+curl http://localhost:8000/metrics | head -20
+
+# === STEP 8: Configure Volumes (for persistence) ===
+cd /workspace/nexuslang-v2
+bash configure_volumes.sh
+
+# === STEP 9: Create First Backup ===
+cd v2/backend
+python scripts/backup_database.py
+
+# === STEP 10: Run Validation ===
+python scripts/validate_deployment.py --verbose
+
+# === DONE! ===
+echo "✅ Recovery and Analytics System is now active!"
+echo "📍 Access your API at: https://YOUR-POD-ID-8000.proxy.runpod.net/docs"
+

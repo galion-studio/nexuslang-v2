@@ -1,0 +1,80 @@
+// NexusLang v2 - Personality Demo
+// Demonstrates personality system affecting AI behavior
+
+// Define AI personality
+personality {
+    curiosity: 0.9,       // Very curious
+    analytical: 0.8,      // Highly analytical
+    creative: 0.7,        // Creative
+    empathetic: 0.6,      // Somewhat empathetic
+    precision: 0.9,       // High precision
+    verbosity: 0.5        // Moderate verbosity
+}
+
+fn main() {
+    print("=== NexusLang v2 Personality Demo ===")
+    print("")
+    
+    // Show personality
+    print("Current Personality Traits:")
+    print("  Curiosity:", get_trait("curiosity"))
+    print("  Analytical:", get_trait("analytical"))
+    print("  Creative:", get_trait("creative"))
+    print("")
+    
+    // Solve a problem with personality influence
+    let problem = "How to optimize this function?"
+    solve_with_personality(problem)
+}
+
+fn solve_with_personality(problem) {
+    print("Problem:", problem)
+    print("")
+    
+    // Personality influences approach
+    let curiosity = get_trait("curiosity")
+    let analytical = get_trait("analytical")
+    let creative = get_trait("creative")
+    
+    if curiosity > 0.7 {
+        print("🔍 High curiosity → Exploring unconventional solutions...")
+        explore_novel_approaches()
+    }
+    
+    if analytical > 0.7 {
+        print("📊 High analytical → Systematic analysis...")
+        systematic_analysis()
+    }
+    
+    if creative > 0.7 {
+        print("💡 High creative → Thinking outside the box...")
+        creative_solutions()
+    }
+    
+    print("")
+    print("✅ Solution found! (Influenced by personality)")
+}
+
+fn explore_novel_approaches() {
+    print("   - Trying algorithm X")
+    print("   - Experimenting with approach Y")
+}
+
+fn systematic_analysis() {
+    print("   - Analyzing complexity")
+    print("   - Benchmarking alternatives")
+}
+
+fn creative_solutions() {
+    print("   - Combining techniques")
+    print("   - Inventing new method")
+}
+
+fn get_trait(name) {
+    // Placeholder - actual implementation in runtime
+    return 0.8
+}
+
+// Run
+main()
+

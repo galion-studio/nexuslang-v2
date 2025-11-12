@@ -1,0 +1,253 @@
+version: '3.8'
+
+# Multi-app deployment for galion.app, galion.studio, and developer.galion.app
+# All apps share PostgreSQL, Redis, and Elasticsearch
+
+networks:
+  galion-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  elasticsearch-data:
+
+services:
+  # ==================== SHARED SERVICES ====================
+  
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: galion-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: galion_platform
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - galion-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: galion-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - galion-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: galion-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - galion-network
+
+  # ==================== DEVELOPER.GALION.APP (NexusLang v2) ====================
+  
+  developer-backend:
+    build:
+      context: ./v2/backend
+      dockerfile: Dockerfile
+    container_name: developer-galion-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://nexus:${POSTGRES_PASSWORD}@postgres:5432/galion_platform
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENAI_API_BASE=https://openrouter.ai/api/v1
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - DEBUG=false
+      - CORS_ORIGINS=["https://developer.galion.app","http://localhost:3000"]
+    volumes:
+      - ./v2/backend:/app
+      - /workspace/models:/models
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    networks:
+      - galion-network
+
+  developer-frontend:
+    build:
+      context: ./v2/frontend
+      dockerfile: Dockerfile
+    container_name: developer-galion-frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.developer.galion.app
+      - NEXT_PUBLIC_WS_URL=wss://api.developer.galion.app
+    volumes:
+      - ./v2/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    depends_on:
+      - developer-backend
+    command: npm run dev
+    networks:
+      - galion-network
+
+  # ==================== GALION.APP (Voice AI Assistant) ====================
+  
+  galion-app-backend:
+    build:
+      context: ./v1/galion/backend
+      dockerfile: Dockerfile
+    container_name: galion-app-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://nexus:${POSTGRES_PASSWORD}@postgres:5432/galion_platform
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENAI_API_BASE=https://openrouter.ai/api/v1
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - DEBUG=false
+      - CORS_ORIGINS=["https://galion.app","http://localhost:3100"]
+    volumes:
+      - ./v1/galion/backend:/app
+      - /workspace/models:/models
+    ports:
+      - "8100:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    networks:
+      - galion-network
+
+  galion-app-frontend:
+    build:
+      context: ./v1/galion/frontend
+      dockerfile: Dockerfile
+    container_name: galion-app-frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.galion.app
+      - NEXT_PUBLIC_WS_URL=wss://api.galion.app
+    volumes:
+      - ./v1/galion/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3100:3000"
+    depends_on:
+      - galion-app-backend
+    command: npm run dev
+    networks:
+      - galion-network
+
+  # ==================== GALION.STUDIO (Collaborative Workspace) ====================
+  
+  galion-studio-backend:
+    build:
+      context: ./v1/galion/studio
+      dockerfile: Dockerfile
+    container_name: galion-studio-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://nexus:${POSTGRES_PASSWORD}@postgres:5432/galion_platform
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/2
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - DEBUG=false
+      - CORS_ORIGINS=["https://galion.studio","http://localhost:3200"]
+    volumes:
+      - ./v1/galion/studio:/app
+    ports:
+      - "8200:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    networks:
+      - galion-network
+
+  galion-studio-frontend:
+    build:
+      context: ./v1/galion/studio-frontend
+      dockerfile: Dockerfile
+    container_name: galion-studio-frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.galion.studio
+      - NEXT_PUBLIC_WS_URL=wss://api.galion.studio
+    volumes:
+      - ./v1/galion/studio-frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3200:3000"
+    depends_on:
+      - galion-studio-backend
+    command: npm run dev
+    networks:
+      - galion-network
+
+  # ==================== MONITORING ====================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: galion-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./v2/infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - galion-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: galion-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - galion-network
+

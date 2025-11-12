@@ -1,0 +1,51 @@
+// Example 12: Tensor Operations for AI
+// Work with multi-dimensional arrays (tensors)
+
+fn main() {
+    print("=== Tensor Operations Demo ===")
+    print("")
+    
+    // Create tensors
+    print("1. Creating Tensors:")
+    let a = tensor([1, 2, 3, 4])
+    let b = tensor([5, 6, 7, 8])
+    print("   Tensor a:", a)
+    print("   Tensor b:", b)
+    print("")
+    
+    // Special tensors
+    print("2. Special Tensors:")
+    let zeros_t = zeros(3, 3)
+    let ones_t = ones(2, 4)
+    let random_t = randn(2, 3)
+    print("   Zeros(3x3):  Created")
+    print("   Ones(2x4):   Created")
+    print("   Random(2x3): Created")
+    print("")
+    
+    // Tensor operations
+    print("3. Tensor Math:")
+    print("   Element-wise operations supported:")
+    print("   - Addition, Subtraction")
+    print("   - Multiplication, Division")
+    print("   - Matrix multiplication")
+    print("   - Broadcasting")
+    print("")
+    
+    // Activation functions
+    print("4. Activation Functions:")
+    print("   ✅ ReLU    - Rectified Linear Unit")
+    print("   ✅ Sigmoid - Logistic function")
+    print("   ✅ Softmax - Probability distribution")
+    print("   ✅ Tanh    - Hyperbolic tangent")
+    print("")
+    
+    print("5. Neural Network Building Blocks:")
+    print("   Ready to use in your models!")
+    print("")
+    
+    print("✅ Tensor operations ready for ML!")
+}
+
+main()
+

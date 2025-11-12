@@ -1,0 +1,59 @@
+# Docker Compose override for Cloudflare Tunnel deployment
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d
+
+version: '3.8'
+
+services:
+  # Cloudflare Tunnel - Secure connection to Cloudflare network
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: nexus-cloudflared
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflare-tunnel.yml:/etc/cloudflared/config.yml:ro
+      - ./cloudflare-credentials.json:/etc/cloudflared/credentials.json:ro
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - nexus-frontend
+      - nexus-backend
+    restart: unless-stopped
+    depends_on:
+      - api-gateway
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # Cloudflare Manager Service
+  cloudflare-manager:
+    build:
+      context: ./services/cloudflare-service
+      dockerfile: Dockerfile
+    container_name: nexus-cloudflare-manager
+    environment:
+      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+      PRIMARY_DOMAIN: ${PRIMARY_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+    networks:
+      - nexus-backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # Update API Gateway for Cloudflare headers
+  api-gateway:
+    environment:
+      - CLOUDFLARE_ENABLED=true
+      - TRUST_CLOUDFLARE_IPS=true
+

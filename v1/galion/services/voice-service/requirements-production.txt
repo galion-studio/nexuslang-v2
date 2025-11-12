@@ -1,0 +1,57 @@
+# Production requirements for Voice Service
+
+# Core framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# WebSocket support
+websockets==12.0
+python-socketio==5.10.0
+
+# Voice processing
+faster-whisper==0.10.0
+TTS==0.20.0
+soundfile==0.12.1
+librosa==0.10.1
+pydub==0.25.1
+
+# ML/AI
+vllm==0.2.7
+torch==2.1.0
+torchaudio==2.1.0
+transformers==4.35.0
+accelerate==0.24.1
+bitsandbytes==0.41.3
+sentencepiece==0.1.99
+
+# Database
+asyncpg==0.29.0
+redis==5.0.1
+sqlalchemy==2.0.23
+alembic==1.12.1
+
+# AWS
+boto3==1.29.7
+aioboto3==12.0.0
+
+# Monitoring
+prometheus-client==0.19.0
+opentelemetry-api==1.21.0
+opentelemetry-sdk==1.21.0
+opentelemetry-instrumentation-fastapi==0.42b0
+
+# Utilities
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+httpx==0.25.2
+aiofiles==23.2.1
+tenacity==8.2.3
+
+# Logging
+structlog==23.2.0
+python-json-logger==2.0.7
+

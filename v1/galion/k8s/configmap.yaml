@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexus-config
+  namespace: nexus-core
+data:
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  JWT_ALGORITHM: "HS256"
+  JWT_EXPIRATION_SECONDS: "3600"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "100"
+  AUTH_SERVICE_URL: "http://auth-service:8000"
+  USER_SERVICE_URL: "http://user-service:8001"
+  SCRAPING_SERVICE_URL: "http://scraping-service:8002"
+  ALLOWED_ORIGINS: "https://galion.app,https://app.galion.app,https://api.galion.app"
+  STORAGE_BACKEND: "cloudflare-r2"
+  STORAGE_PRICE_PER_GB: "0.25"
+  FREE_STORAGE_GB: "1"
+  PREMIUM_STORAGE_GB: "100"
+  PREMIUM_PRICE_EUR: "25"
+  MAX_CONCURRENT_SCRAPES: "50"
+  REQUEST_TIMEOUT: "60"
+  MAX_RETRIES: "3"
+  DOMAIN: "galion.app"
+  API_DOMAIN: "api.galion.app"
+  APP_DOMAIN: "app.galion.app"
+  GRAFANA_DOMAIN: "grafana.galion.app"
+

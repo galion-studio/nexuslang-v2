@@ -1,0 +1,57 @@
+# ===============================================
+# Prometheus Configuration for NexusLang v2
+# ===============================================
+# Scrapes metrics from backend API and exports
+
+global:
+  scrape_interval: 15s      # Scrape targets every 15 seconds
+  evaluation_interval: 15s  # Evaluate alert rules every 15 seconds
+  external_labels:
+    cluster: 'nexuslang-v2'
+    environment: 'production'
+
+# Alertmanager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - 'alertmanager:9093'  # Uncomment when alertmanager is deployed
+
+# Load alert rules
+rule_files:
+  - 'alerts/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # NexusLang Backend API
+  - job_name: 'nexuslang-backend'
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    
+  # PostgreSQL Exporter (if deployed)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    
+  # Redis Exporter (if deployed)  
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+    
+  # Node Exporter for system metrics (if deployed)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+# Storage retention
+storage:
+  tsdb:
+    retention.time: 30d      # Keep metrics for 30 days
+    retention.size: 10GB     # Maximum storage size
+

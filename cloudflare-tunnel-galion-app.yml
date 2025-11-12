@@ -1,0 +1,46 @@
+# Cloudflare Tunnel Configuration for galion.app
+# Voice-first AI Assistant for Science
+
+ingress:
+  # Main website - AI Assistant frontend
+  - hostname: galion.app
+    service: http://localhost:3100
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # WWW subdomain
+  - hostname: www.galion.app
+    service: http://localhost:3100
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # API subdomain - Backend API
+  - hostname: api.galion.app
+    service: http://localhost:8100
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # WebSocket for voice streaming
+  - hostname: ws.galion.app
+    service: http://localhost:8100
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # Voice endpoint (dedicated for low-latency)
+  - hostname: voice.galion.app
+    service: http://localhost:8100
+    originRequest:
+      connectTimeout: 10s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # Catch-all rule - Required by Cloudflare
+  - service: http_status:404

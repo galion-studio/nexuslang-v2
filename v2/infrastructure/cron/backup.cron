@@ -1,0 +1,81 @@
+# Cron jobs for Project Nexus automated backups
+# Install with: crontab -e
+# Add these lines to your crontab
+
+# Set environment variables
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+NEXUS_HOME=/opt/project-nexus
+BACKUP_LOG=/var/log/nexus-backup.log
+
+# Email notifications (optional)
+# MAILTO=admin@galion.app
+
+# ============================================================
+# HOURLY BACKUPS (every hour at minute 0)
+# ============================================================
+0 * * * * cd $NEXUS_HOME && python3 v2/infrastructure/backup/backup-daemon.py --config v2/infrastructure/backup/backup-config.yml --once 2>&1 | tee -a $BACKUP_LOG
+
+# ============================================================
+# DAILY BACKUPS (2:00 AM every day)
+# ============================================================
+0 2 * * * cd $NEXUS_HOME && python3 v2/infrastructure/backup/backup-daemon.py --config v2/infrastructure/backup/backup-config.yml --once --type daily 2>&1 | tee -a $BACKUP_LOG
+
+# ============================================================
+# WEEKLY BACKUPS (2:30 AM every Sunday)
+# ============================================================
+30 2 * * 0 cd $NEXUS_HOME && python3 v2/infrastructure/backup/backup-daemon.py --config v2/infrastructure/backup/backup-config.yml --once --type weekly 2>&1 | tee -a $BACKUP_LOG
+
+# ============================================================
+# MONTHLY BACKUPS (3:00 AM on 1st of month)
+# ============================================================
+0 3 1 * * cd $NEXUS_HOME && python3 v2/infrastructure/backup/backup-daemon.py --config v2/infrastructure/backup/backup-config.yml --once --type monthly 2>&1 | tee -a $BACKUP_LOG
+
+# ============================================================
+# BACKUP VERIFICATION (4:00 AM every day)
+# ============================================================
+0 4 * * * cd $NEXUS_HOME && python3 v2/infrastructure/backup/verify-backups.py 2>&1 | tee -a $BACKUP_LOG
+
+# ============================================================
+# OFFSITE SYNC (5:00 AM every day)
+# ============================================================
+0 5 * * * cd $NEXUS_HOME && rclone sync /var/backups/nexus b2:nexus-backups/backups/ --progress 2>&1 | tee -a $BACKUP_LOG
+
+# ============================================================
+# CLEANUP OLD BACKUPS (6:00 AM every day)
+# ============================================================
+0 6 * * * cd $NEXUS_HOME && python3 v2/infrastructure/backup/cleanup.py 2>&1 | tee -a $BACKUP_LOG
+
+# ============================================================
+# LOG ROTATION (7:00 AM every day)
+# ============================================================
+0 7 * * * cd $NEXUS_HOME && gzip $BACKUP_LOG && mv ${BACKUP_LOG}.gz ${BACKUP_LOG}.$(date +\%Y\%m\%d).gz && touch $BACKUP_LOG
+
+# ============================================================
+# HEALTH CHECK PING (every 30 minutes)
+# ============================================================
+*/30 * * * * curl -fsS -m 10 --retry 3 https://uptime.betterstack.com/api/v1/heartbeat/YOUR_HEARTBEAT_ID > /dev/null 2>&1
+
+# ============================================================
+# DOCKER CLEANUP (2:00 AM every Sunday)
+# ============================================================
+0 2 * * 0 docker system prune -f --volumes >> /var/log/docker-cleanup.log 2>&1
+
+# ============================================================
+# NOTES:
+# ============================================================
+# - Adjust timing based on your server load
+# - Ensure Python environment has required packages
+# - Monitor $BACKUP_LOG for errors
+# - Test restore procedure monthly
+# - Keep at least 24 hourly, 7 daily, 4 weekly, 12 monthly backups
+#
+# To view currently installed cron jobs:
+#   crontab -l
+#
+# To edit cron jobs:
+#   crontab -e
+#
+# To view cron log:
+#   tail -f $BACKUP_LOG
+

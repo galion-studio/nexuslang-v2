@@ -1,0 +1,55 @@
+# Cloudflare Tunnel Configuration for developer.galion.app
+# NexusLang v2 Platform - IDE, Grokopedia, Voice, Community
+
+ingress:
+  # Main website - Developer platform frontend
+  - hostname: developer.galion.app
+    service: http://localhost:3000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # WWW subdomain
+  - hostname: www.developer.galion.app
+    service: http://localhost:3000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # API subdomain - Backend API
+  - hostname: api.developer.galion.app
+    service: http://localhost:8000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # WebSocket support for real-time features
+  - hostname: ws.developer.galion.app
+    service: http://localhost:8000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # Monitoring - Grafana dashboard
+  - hostname: grafana.developer.galion.app
+    service: http://localhost:3001
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # Metrics - Prometheus
+  - hostname: prometheus.developer.galion.app
+    service: http://localhost:9090
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+      http2Origin: true
+  
+  # Catch-all rule - Required by Cloudflare
+  - service: http_status:404
+

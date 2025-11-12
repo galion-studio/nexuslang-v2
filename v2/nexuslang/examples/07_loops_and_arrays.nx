@@ -1,0 +1,79 @@
+// Example 7: Control Flow and Data Structures
+// Learn basic NexusLang syntax
+
+fn main() {
+    print("=== Loops and Arrays Demo ===")
+    print("")
+    
+    // Arrays
+    print("1. Arrays:")
+    let numbers = [1, 2, 3, 4, 5]
+    print("   Numbers:", numbers)
+    print("")
+    
+    // For loops
+    print("2. For Loop:")
+    for num in numbers {
+        print("   Number:", num)
+    }
+    print("")
+    
+    // Range syntax
+    print("3. Range Loop:")
+    for i in 0..5 {
+        print("   Index:", i)
+    }
+    print("")
+    
+    // While loops
+    print("4. While Loop:")
+    let counter = 0
+    while counter < 3 {
+        print("   Counter:", counter)
+        counter = counter + 1
+    }
+    print("")
+    
+    // Array operations
+    print("5. Array Operations:")
+    let sum = sum_array(numbers)
+    let avg = average(numbers)
+    print("   Sum:", sum)
+    print("   Average:", avg)
+    print("")
+    
+    // Nested structures
+    print("6. Nested Arrays:")
+    let matrix = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+    ]
+    print_matrix(matrix)
+}
+
+fn sum_array(arr) {
+    let total = 0
+    for num in arr {
+        total = total + num
+    }
+    return total
+}
+
+fn average(arr) {
+    let sum = sum_array(arr)
+    return sum / arr.length
+}
+
+fn print_matrix(matrix) {
+    for row in matrix {
+        let row_str = "   "
+        for val in row {
+            row_str = row_str + val + " "
+        }
+        print(row_str)
+    }
+}
+
+main()
+

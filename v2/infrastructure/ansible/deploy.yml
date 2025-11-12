@@ -1,0 +1,102 @@
+---
+# Ansible Playbook for Project Nexus Deployment
+# Usage: ansible-playbook -i inventory.yml deploy.yml
+
+- name: Deploy Project Nexus
+  hosts: nexus_servers
+  become: yes
+  vars:
+    project_dir: /opt/project-nexus
+    nexus_user: nexus
+    
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+    
+    - name: Ensure required packages are installed
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - git
+          - python3-pip
+        state: present
+    
+    - name: Ensure nexus user exists
+      user:
+        name: "{{ nexus_user }}"
+        groups: docker,sudo
+        shell: /bin/bash
+        createhome: yes
+    
+    - name: Pull latest code from git
+      git:
+        repo: https://github.com/your-org/project-nexus.git
+        dest: "{{ project_dir }}"
+        version: main
+        force: yes
+      become_user: "{{ nexus_user }}"
+    
+    - name: Copy environment file
+      copy:
+        src: ../../../.env
+        dest: "{{ project_dir }}/.env"
+        owner: "{{ nexus_user }}"
+        group: "{{ nexus_user }}"
+        mode: '0600'
+    
+    - name: Stop existing containers
+      docker_compose:
+        project_src: "{{ project_dir }}"
+        state: absent
+      become_user: "{{ nexus_user }}"
+      ignore_errors: yes
+    
+    - name: Pull latest Docker images
+      docker_compose:
+        project_src: "{{ project_dir }}"
+        pull: yes
+      become_user: "{{ nexus_user }}"
+    
+    - name: Start services
+      docker_compose:
+        project_src: "{{ project_dir }}"
+        state: present
+      become_user: "{{ nexus_user }}"
+    
+    - name: Wait for services to be healthy
+      wait_for:
+        port: 8000
+        delay: 10
+        timeout: 60
+    
+    - name: Run database migrations
+      docker_compose:
+        project_src: "{{ project_dir }}"
+        services: backend
+        restarted: yes
+      become_user: "{{ nexus_user }}"
+    
+    - name: Setup backup cron job
+      cron:
+        name: "Nexus hourly backup"
+        minute: "0"
+        hour: "*"
+        job: "cd {{ project_dir }} && python3 v2/infrastructure/backup/backup-daemon.py --config v2/infrastructure/backup/backup-config.yml --once >> /var/log/nexus-backup.log 2>&1"
+        user: "{{ nexus_user }}"
+    
+    - name: Verify deployment
+      uri:
+        url: http://localhost:8000/health
+        status_code: 200
+      register: health_check
+      retries: 5
+      delay: 5
+    
+    - name: Display deployment status
+      debug:
+        msg: "✅ Deployment successful! API is healthy."
+      when: health_check.status == 200
+

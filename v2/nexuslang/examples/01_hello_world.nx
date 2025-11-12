@@ -1,0 +1,10 @@
+// Example 1: Hello World with NexusLang v2
+// The simplest possible program
+
+fn main() {
+    print("Hello, NexusLang v2!")
+    print("Welcome to the future of AI development!")
+}
+
+main()
+

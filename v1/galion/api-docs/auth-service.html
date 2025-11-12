@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Service API - Nexus Core</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #2d3748;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header .subtitle {
+            color: #718096;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #c6f6d5;
+            color: #22543d;
+            margin-right: 10px;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .content-card h2 {
+            color: #2d3748;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .content-card h3 {
+            color: #4a5568;
+            font-size: 1.3em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .endpoint-card {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .method {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+
+        .method.post {
+            background: #48bb78;
+            color: white;
+        }
+
+        .method.get {
+            background: #4299e1;
+            color: white;
+        }
+
+        .method.put {
+            background: #ed8936;
+            color: white;
+        }
+
+        .method.delete {
+            background: #f56565;
+            color: white;
+        }
+
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .description {
+            margin-top: 10px;
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            background: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #e53e3e;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #48bb78;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .nav-link.secondary {
+            background: #cbd5e0;
+            color: #2d3748;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #edf2f7;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .auth-required {
+            background: #fed7d7;
+            color: #742a2a;
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .no-auth {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Authentication Service API</h1>
+            <p class="subtitle">Secure user registration, login, and JWT token management</p>
+            <div>
+                <span class="badge">Port: 8000</span>
+                <span class="badge">FastAPI</span>
+                <span class="badge">Python 3.11</span>
+            </div>
+            <div class="nav-links" style="margin-top: 20px;">
+                <a href="../nexus-status.html" class="nav-link">← Back to Status</a>
+                <a href="http://localhost:8000/docs" class="nav-link" target="_blank">📖 Swagger Docs</a>
+                <a href="../docs/AUTH_SERVICE.md" class="nav-link secondary">📄 Service Details</a>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>🎯 Overview</h2>
+            <p class="description">
+                The Authentication Service is the security backbone of Nexus Core. It handles all user authentication,
+                authorization, and token management using industry-standard JWT tokens and bcrypt password hashing.
+            </p>
+            
+            <h3>Key Features</h3>
+            <ul class="feature-list">
+                <li>Secure user registration with email validation</li>
+                <li>Password hashing using bcrypt (12 rounds)</li>
+                <li>JWT token generation and verification (HS256)</li>
+                <li>Two-Factor Authentication (TOTP) support</li>
+                <li>Backup/recovery codes for 2FA</li>
+                <li>Role-based access control (RBAC)</li>
+                <li>Account status management (active, suspended, locked)</li>
+                <li>Event streaming to Kafka for analytics</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h2>🔌 API Endpoints</h2>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auth/register</span>
+                    <span class="no-auth">No Auth Required</span>
+                </div>
+                <p class="description">Register a new user account. Validates email uniqueness and creates user with hashed password.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Request Body:</h4>
+<pre>{
+  "email": "user@example.com",
+  "password": "SecurePassword123",
+  "name": "John Doe"
+}</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (201 Created):</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "role": "user",
+      "status": "active",
+      "email_verified": false,
+      "created_at": "2024-11-09T10:30:00Z"
+    },
+    "message": "Registration successful"
+  }
+}</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auth/login</span>
+                    <span class="no-auth">No Auth Required</span>
+                </div>
+                <p class="description">Login with email and password. Returns JWT token or 2FA challenge if enabled.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Request Body:</h4>
+<pre>{
+  "email": "user@example.com",
+  "password": "SecurePassword123"
+}</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "token_type": "Bearer",
+    "expires_in": 3600,
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "role": "user"
+    }
+  }
+}</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK - 2FA Required):</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "requires_2fa": true,
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "message": "Please provide your 2FA code"
+  }
+}</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auth/verify-2fa</span>
+                    <span class="no-auth">No Auth Required</span>
+                </div>
+                <p class="description">Complete login with 2FA code after initial authentication.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Request Body:</h4>
+<pre>{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "code": "123456"
+}</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "token_type": "Bearer",
+    "expires_in": 3600,
+    "user": { ... }
+  }
+}</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/api/v1/auth/me</span>
+                    <span class="auth-required">Auth Required</span>
+                </div>
+                <p class="description">Get currently authenticated user's information.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Headers:</h4>
+<pre>Authorization: Bearer eyJhbGciOiJIUzI1NiIs...</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "role": "user",
+    "status": "active",
+    "email_verified": true,
+    "totp_enabled": false,
+    "created_at": "2024-11-09T10:30:00Z",
+    "last_login_at": "2024-11-09T15:45:00Z"
+  }
+}</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/2fa/setup</span>
+                    <span class="auth-required">Auth Required</span>
+                </div>
+                <p class="description">Initiate 2FA setup. Returns QR code and backup codes.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "secret": "JBSWY3DPEHPK3PXP",
+    "qr_code": "data:image/png;base64,iVBORw0KG...",
+    "backup_codes": [
+      "1A2B-3C4D",
+      "5E6F-7G8H",
+      "9I0J-1K2L",
+      ...
+    ],
+    "message": "Scan QR code with authenticator app"
+  }
+}</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/2fa/verify</span>
+                    <span class="auth-required">Auth Required</span>
+                </div>
+                <p class="description">Verify and enable 2FA with code from authenticator app.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Request Body:</h4>
+<pre>{
+  "code": "123456"
+}</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "message": "2FA successfully enabled"
+  }
+}</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/api/v1/2fa/status</span>
+                    <span class="auth-required">Auth Required</span>
+                </div>
+                <p class="description">Check 2FA status for current user.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "enabled": true,
+    "verified_at": "2024-11-09T10:30:00Z",
+    "backup_codes_count": 8
+  }
+}</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/2fa/disable</span>
+                    <span class="auth-required">Auth Required</span>
+                </div>
+                <p class="description">Disable 2FA (requires password and current 2FA code).</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Request Body:</h4>
+<pre>{
+  "password": "your_current_password",
+  "code": "123456"
+}</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="no-auth">No Auth Required</span>
+                </div>
+                <p class="description">Health check endpoint for monitoring.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>{
+  "status": "healthy",
+  "service": "auth-service",
+  "version": "1.0.0",
+  "database": "connected",
+  "redis": "connected"
+}</pre>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>🔒 Security</h2>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>Implementation</th>
+                </tr>
+                <tr>
+                    <td>Password Hashing</td>
+                    <td>bcrypt with 12 rounds (industry standard)</td>
+                </tr>
+                <tr>
+                    <td>JWT Algorithm</td>
+                    <td>HS256 (HMAC with SHA-256)</td>
+                </tr>
+                <tr>
+                    <td>Token Expiration</td>
+                    <td>1 hour (3600 seconds)</td>
+                </tr>
+                <tr>
+                    <td>2FA Method</td>
+                    <td>TOTP (Time-based One-Time Password)</td>
+                </tr>
+                <tr>
+                    <td>Backup Codes</td>
+                    <td>10 single-use recovery codes</td>
+                </tr>
+                <tr>
+                    <td>Rate Limiting</td>
+                    <td>Handled by API Gateway (60 req/min)</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="content-card">
+            <h2>⚙️ Configuration</h2>
+            <h3>Environment Variables</h3>
+            <table>
+                <tr>
+                    <th>Variable</th>
+                    <th>Description</th>
+                    <th>Default</th>
+                </tr>
+                <tr>
+                    <td><code>PORT</code></td>
+                    <td>Service port</td>
+                    <td>8000</td>
+                </tr>
+                <tr>
+                    <td><code>DATABASE_URL</code></td>
+                    <td>PostgreSQL connection string</td>
+                    <td>Required</td>
+                </tr>
+                <tr>
+                    <td><code>REDIS_URL</code></td>
+                    <td>Redis connection string</td>
+                    <td>Required</td>
+                </tr>
+                <tr>
+                    <td><code>JWT_SECRET_KEY</code></td>
+                    <td>Secret key for JWT signing</td>
+                    <td>Required</td>
+                </tr>
+                <tr>
+                    <td><code>JWT_ALGORITHM</code></td>
+                    <td>JWT algorithm</td>
+                    <td>HS256</td>
+                </tr>
+                <tr>
+                    <td><code>KAFKA_BROKERS</code></td>
+                    <td>Kafka broker addresses</td>
+                    <td>localhost:9092</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="content-card">
+            <h2>📊 Error Responses</h2>
+            <table>
+                <tr>
+                    <th>Status Code</th>
+                    <th>Error</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td>400</td>
+                    <td>Bad Request</td>
+                    <td>Invalid input data or email already registered</td>
+                </tr>
+                <tr>
+                    <td>401</td>
+                    <td>Unauthorized</td>
+                    <td>Invalid credentials or expired token</td>
+                </tr>
+                <tr>
+                    <td>403</td>
+                    <td>Forbidden</td>
+                    <td>Account suspended or locked</td>
+                </tr>
+                <tr>
+                    <td>429</td>
+                    <td>Too Many Requests</td>
+                    <td>Rate limit exceeded</td>
+                </tr>
+                <tr>
+                    <td>500</td>
+                    <td>Internal Server Error</td>
+                    <td>Server error, check logs</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+

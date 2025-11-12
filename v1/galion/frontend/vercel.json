@@ -1,0 +1,17 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@api_url",
+    "NEXT_PUBLIC_AUTH_SERVICE_URL": "@auth_url",
+    "NEXT_PUBLIC_USER_SERVICE_URL": "@user_url",
+    "NEXT_PUBLIC_VOICE_SERVICE_URL": "@voice_url",
+    "NEXT_PUBLIC_DOCUMENT_SERVICE_URL": "@document_url",
+    "NEXT_PUBLIC_PERMISSIONS_SERVICE_URL": "@permissions_url",
+    "NEXT_PUBLIC_ANALYTICS_SERVICE_URL": "@analytics_url"
+  }
+}
+

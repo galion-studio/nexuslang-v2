@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Service API - Nexus Core</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .header h1 {
+            font-size: 2.5em;
+            color: #2d3748;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header .subtitle { color: #718096; font-size: 1.1em; margin-bottom: 20px; }
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #c6f6d5;
+            color: #22543d;
+            margin-right: 10px;
+        }
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        .content-card h2 {
+            color: #2d3748;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+        .content-card h3 { color: #4a5568; font-size: 1.3em; margin-top: 25px; margin-bottom: 15px; }
+        .endpoint-card {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .method {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+        .method.post { background: #48bb78; color: white; }
+        .method.get { background: #4299e1; color: white; }
+        .method.ws { background: #9f7aea; color: white; }
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            color: #2d3748;
+            font-weight: 600;
+        }
+        .description { margin-top: 10px; color: #4a5568; line-height: 1.6; }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        code {
+            font-family: 'Courier New', monospace;
+            background: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #e53e3e;
+        }
+        .feature-list { list-style: none; padding: 0; }
+        .feature-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #48bb78;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .nav-links { display: flex; gap: 15px; flex-wrap: wrap; }
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .nav-link.secondary { background: #cbd5e0; color: #2d3748; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #edf2f7; font-weight: 600; color: #2d3748; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Voice Service API</h1>
+            <p class="subtitle">Speech-to-Text, Text-to-Speech, and AI-powered voice interactions</p>
+            <div>
+                <span class="badge">Port: 8003</span>
+                <span class="badge">FastAPI</span>
+                <span class="badge">WebSocket</span>
+            </div>
+            <div class="nav-links" style="margin-top: 20px;">
+                <a href="../nexus-status.html" class="nav-link">← Back to Status</a>
+                <a href="http://localhost:8003/docs" class="nav-link" target="_blank">📖 Swagger Docs</a>
+                <a href="../docs/VOICE_SERVICE.md" class="nav-link secondary">📄 Service Details</a>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>🎯 Overview</h2>
+            <p class="description">
+                The Voice Service enables voice interactions with Nexus Core, providing real-time speech recognition,
+                natural language understanding, and voice synthesis. Talk to Nexus like you talk to JARVIS!
+            </p>
+            
+            <h3>Key Features</h3>
+            <ul class="feature-list">
+                <li>Real-time Speech-to-Text (OpenAI Whisper)</li>
+                <li>Natural Text-to-Speech (ElevenLabs)</li>
+                <li>AI-powered intent recognition</li>
+                <li>WebSocket streaming for low latency</li>
+                <li>Command routing to appropriate services</li>
+                <li>Multi-language support</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h2>🔌 API Endpoints</h2>
+
+            <h3>WebSocket Endpoint</h3>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method ws">WS</span>
+                    <span class="endpoint-path">/api/v1/voice/stream</span>
+                </div>
+                <p class="description">Real-time voice streaming with bi-directional communication.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Connection:</h4>
+<pre>ws://localhost:8003/api/v1/voice/stream</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Send (Audio Data):</h4>
+<pre>{
+  "type": "audio",
+  "data": "base64_encoded_audio_data",
+  "format": "webm",
+  "sample_rate": 16000
+}</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Receive (Transcription):</h4>
+<pre>{
+  "type": "transcription",
+  "text": "Show me my profile",
+  "confidence": 0.95,
+  "language": "en"
+}</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Receive (Intent):</h4>
+<pre>{
+  "type": "intent",
+  "action": "get_profile",
+  "confidence": 0.92,
+  "parameters": {}
+}</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Receive (Response Audio):</h4>
+<pre>{
+  "type": "audio_response",
+  "data": "base64_encoded_audio",
+  "format": "mp3",
+  "duration": 2.5
+}</pre>
+            </div>
+
+            <h3>HTTP Endpoints</h3>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/voice/stt</span>
+                </div>
+                <p class="description">Convert speech to text (Speech-to-Text).</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Request (multipart/form-data):</h4>
+<pre>POST /api/v1/voice/stt
+Content-Type: multipart/form-data
+
+file: audio_file.wav (or .mp3, .webm, etc.)
+language: en (optional)</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "text": "Hello, show me my profile",
+    "language": "en",
+    "confidence": 0.95,
+    "duration": 2.3
+  }
+}</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/voice/tts</span>
+                </div>
+                <p class="description">Convert text to speech (Text-to-Speech).</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Request Body:</h4>
+<pre>{
+  "text": "Your profile has been updated successfully",
+  "voice": "default",
+  "language": "en"
+}</pre>
+
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>Content-Type: audio/mpeg
+
+[Binary audio data]</pre>
+            </div>
+
+            <div class="endpoint-card">
+                <div>
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/health</span>
+                </div>
+                <p class="description">Health check endpoint with feature availability.</p>
+                
+                <h4 style="margin-top: 15px; color: #2d3748;">Response (200 OK):</h4>
+<pre>{
+  "status": "healthy",
+  "service": "voice-service",
+  "version": "1.0.0",
+  "features": {
+    "stt": true,
+    "tts": true,
+    "intent": true
+  }
+}</pre>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>🎙️ Supported Commands</h2>
+            <p class="description">The voice service recognizes and routes the following voice commands:</p>
+            
+            <h3>User Profile Commands</h3>
+            <ul class="feature-list">
+                <li>"Show my profile" - Get user information</li>
+                <li>"Update my name to..." - Update profile</li>
+                <li>"What's my email?" - Get account details</li>
+            </ul>
+
+            <h3>Search Commands</h3>
+            <ul class="feature-list">
+                <li>"Search for users named..." - Search users</li>
+                <li>"Find user with email..." - Find specific user</li>
+                <li>"Show all users" - List users</li>
+            </ul>
+
+            <h3>Authentication Commands</h3>
+            <ul class="feature-list">
+                <li>"Log me out" - Logout</li>
+                <li>"Who am I?" - Check authentication status</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h2>⚙️ Configuration</h2>
+            <h3>Environment Variables</h3>
+            <table>
+                <tr>
+                    <th>Variable</th>
+                    <th>Description</th>
+                    <th>Required</th>
+                </tr>
+                <tr>
+                    <td><code>PORT</code></td>
+                    <td>Service port</td>
+                    <td>No (default: 8003)</td>
+                </tr>
+                <tr>
+                    <td><code>OPENAI_API_KEY</code></td>
+                    <td>OpenAI API key for Whisper (STT)</td>
+                    <td>Yes (for STT)</td>
+                </tr>
+                <tr>
+                    <td><code>ELEVENLABS_API_KEY</code></td>
+                    <td>ElevenLabs API key for TTS</td>
+                    <td>Yes (for TTS)</td>
+                </tr>
+                <tr>
+                    <td><code>OPENROUTER_API_KEY</code></td>
+                    <td>OpenRouter API key for intent recognition</td>
+                    <td>Yes (for AI features)</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="content-card">
+            <h2>🔧 Integration Examples</h2>
+            
+            <h3>JavaScript WebSocket Client</h3>
+<pre>// Connect to voice stream
+const ws = new WebSocket('ws://localhost:8003/api/v1/voice/stream');
+
+// Send audio data
+ws.send(JSON.stringify({
+  type: 'audio',
+  data: base64AudioData,
+  format: 'webm',
+  sample_rate: 16000
+}));
+
+// Receive responses
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  
+  if (data.type === 'transcription') {
+    console.log('User said:', data.text);
+  }
+  
+  if (data.type === 'intent') {
+    console.log('Detected action:', data.action);
+  }
+  
+  if (data.type === 'audio_response') {
+    playAudio(data.data);
+  }
+};</pre>
+
+            <h3>Python HTTP Client</h3>
+<pre>import requests
+
+# Speech to Text
+with open('audio.wav', 'rb') as f:
+    response = requests.post(
+        'http://localhost:8003/api/v1/voice/stt',
+        files={'file': f}
+    )
+    print(response.json()['data']['text'])
+
+# Text to Speech
+response = requests.post(
+    'http://localhost:8003/api/v1/voice/tts',
+    json={'text': 'Hello from Nexus!'}
+)
+with open('output.mp3', 'wb') as f:
+    f.write(response.content)</pre>
+        </div>
+
+        <div class="content-card">
+            <h2>📊 Error Responses</h2>
+            <table>
+                <tr>
+                    <th>Status Code</th>
+                    <th>Error</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td>400</td>
+                    <td>Bad Request</td>
+                    <td>Invalid audio format or missing parameters</td>
+                </tr>
+                <tr>
+                    <td>413</td>
+                    <td>Payload Too Large</td>
+                    <td>Audio file exceeds size limit (25MB)</td>
+                </tr>
+                <tr>
+                    <td>422</td>
+                    <td>Unprocessable Entity</td>
+                    <td>Could not process audio (quality too low)</td>
+                </tr>
+                <tr>
+                    <td>500</td>
+                    <td>Internal Server Error</td>
+                    <td>STT/TTS API error or server issue</td>
+                </tr>
+                <tr>
+                    <td>503</td>
+                    <td>Service Unavailable</td>
+                    <td>External API (OpenAI/ElevenLabs) unavailable</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+

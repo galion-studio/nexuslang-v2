@@ -1,0 +1,108 @@
+# Nexus Core - 4GB Nano Model Configuration
+# Optimized for edge devices, mobile deployment, and resource-constrained environments
+
+model:
+  name: "nexus-core-nano-4gb"
+  version: "1.0.0"
+  target_size: "4GB"
+  base_model: "nexus-core-500gb"
+  
+architecture:
+  type: "transformer"
+  layers: 12              # Reduced from 96 in base model
+  hidden_size: 768        # Reduced from 8192
+  attention_heads: 12     # Reduced from 128
+  intermediate_size: 3072 # Reduced from 32768
+  vocab_size: 32000       # Reduced vocabulary
+  max_sequence_length: 2048
+  
+distillation:
+  method: "knowledge_distillation"
+  teacher_model: "nexus-core-500gb"
+  temperature: 2.5
+  alpha: 0.7              # Weight for distillation loss
+  beta: 0.3               # Weight for student loss
+  
+  # Pruning strategy
+  pruning:
+    enabled: true
+    method: "magnitude"
+    sparsity: 0.6         # 60% sparsity
+    
+  # Quantization
+  quantization:
+    enabled: true
+    method: "int8"
+    calibration_samples: 1000
+    
+  # Layer reduction
+  layer_distillation:
+    strategy: "skip"      # Keep every 8th layer
+    skip_factor: 8
+    
+training:
+  batch_size: 32
+  learning_rate: 5e-5
+  epochs: 10
+  warmup_steps: 1000
+  gradient_accumulation: 4
+  mixed_precision: "fp16"
+  
+  optimizer:
+    type: "adamw"
+    betas: [0.9, 0.999]
+    weight_decay: 0.01
+    
+  scheduler:
+    type: "cosine"
+    min_lr: 1e-6
+    
+dataset:
+  training:
+    - "data/nexus_conversations.jsonl"
+    - "data/nexus_tasks.jsonl"
+    - "data/synthetic_distill.jsonl"
+  validation:
+    - "data/validation_set.jsonl"
+  max_samples: 500000     # Reduced dataset for nano
+  
+capabilities:
+  # Core features maintained in nano version
+  text_generation: true
+  question_answering: true
+  summarization: true
+  classification: true
+  
+  # Advanced features (limited)
+  code_generation: false
+  multimodal: false
+  long_context: false     # Limited to 2K tokens
+  
+hardware_requirements:
+  min_ram: "8GB"
+  min_vram: "4GB"
+  recommended_ram: "16GB"
+  recommended_vram: "6GB"
+  cpu_cores: 4
+  
+performance_targets:
+  inference_speed: "50 tokens/sec"  # On RTX 3060
+  latency: "< 100ms"
+  accuracy_retention: "85%"         # Compared to base model
+  
+export:
+  formats:
+    - "onnx"
+    - "tensorrt"
+    - "coreml"
+    - "pytorch"
+  optimize_for_inference: true
+  
+deployment:
+  platforms:
+    - "edge_devices"
+    - "mobile"
+    - "raspberry_pi"
+    - "jetson_nano"
+  container_size: "6GB"   # Including runtime
+

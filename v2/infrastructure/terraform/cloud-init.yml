@@ -1,0 +1,89 @@
+#cloud-config
+# Cloud-init configuration for Project Nexus server initial setup
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose
+  - git
+  - curl
+  - wget
+  - ufw
+  - fail2ban
+  - postgresql-client
+  - python3-pip
+  - rclone
+
+# Create nexus user
+users:
+  - name: nexus
+    groups: docker, sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+# Configure firewall
+runcmd:
+  # Setup firewall
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp  # SSH
+  - ufw allow 80/tcp  # HTTP
+  - ufw allow 443/tcp # HTTPS
+  - ufw --force enable
+  
+  # Enable fail2ban
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+  
+  # Mount volumes
+  - mkdir -p /mnt/nexus-data
+  - mkdir -p /mnt/nexus-backups
+  - mount /dev/sdb /mnt/nexus-data
+  - mount /dev/sdc /mnt/nexus-backups
+  - echo '/dev/sdb /mnt/nexus-data ext4 defaults 0 0' >> /etc/fstab
+  - echo '/dev/sdc /mnt/nexus-backups ext4 defaults 0 0' >> /etc/fstab
+  
+  # Setup directories
+  - mkdir -p /opt/project-nexus
+  - chown nexus:nexus /opt/project-nexus
+  - mkdir -p /var/backups/nexus
+  - chown nexus:nexus /var/backups/nexus
+  
+  # Clone repository (will need credentials)
+  - su - nexus -c "git clone https://github.com/your-org/project-nexus.git /opt/project-nexus"
+  
+  # Setup Docker
+  - systemctl enable docker
+  - systemctl start docker
+  - usermod -aG docker nexus
+  
+  # Reboot to apply all changes
+  - shutdown -r +1
+
+write_files:
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+  
+  - path: /etc/fail2ban/jail.local
+    content: |
+      [sshd]
+      enabled = true
+      port = 22
+      filter = sshd
+      logpath = /var/log/auth.log
+      maxretry = 3
+      bantime = 3600
+
+final_message: "Project Nexus server initialization complete! Ready for deployment."
+

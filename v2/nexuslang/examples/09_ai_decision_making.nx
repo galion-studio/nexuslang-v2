@@ -1,0 +1,80 @@
+// Example 9: AI Decision Making with Confidence
+// Show how AI makes decisions with confidence levels
+
+// AI with high confidence in its analysis
+personality {
+    analytical: 0.95,
+    precision: 0.98,
+    confidence: 0.9
+}
+
+fn main() {
+    print("=== AI Decision Making Demo ===")
+    print("")
+    
+    // Make predictions with confidence
+    let data = [
+        [1.2, 3.4, 5.6],
+        [2.1, 4.3, 6.5],
+        [1.8, 3.9, 5.2]
+    ]
+    
+    print("📊 Analyzing data patterns...")
+    print("")
+    
+    for i in 0..data.length {
+        analyze_pattern(data[i], i + 1)
+    }
+    
+    print("")
+    print("🎯 Making final recommendation...")
+    let recommendation = make_recommendation()
+    
+    print("Recommendation:", recommendation)
+}
+
+fn analyze_pattern(sample, index) {
+    // Simulate AI analysis with confidence scoring
+    let avg = average(sample)
+    let prediction = if avg > 4.0 then "HIGH" else "LOW"
+    
+    // Get confidence level (simulated)
+    let conf = confidence(avg)
+    
+    print("Sample", index + ":")
+    print("  Values:", sample)
+    print("  Average:", avg)
+    print("  Prediction:", prediction)
+    print("  Confidence:", conf * 100 + "%")
+    
+    if conf < 0.8 {
+        print("  ⚠️  Low confidence - need more data")
+    }
+    
+    print("")
+}
+
+fn make_recommendation() {
+    let conf = confidence()
+    
+    if conf > 0.9 {
+        return "STRONG BUY - High confidence analysis"
+    }
+    
+    if conf > 0.7 {
+        return "MODERATE - Further analysis recommended"
+    }
+    
+    return "INSUFFICIENT DATA - Cannot make reliable recommendation"
+}
+
+fn average(arr) {
+    let sum = 0
+    for val in arr {
+        sum = sum + val
+    }
+    return sum / arr.length
+}
+
+main()
+

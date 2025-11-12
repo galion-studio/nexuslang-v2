@@ -1,0 +1,94 @@
+// Example 8: Functions and Recursion
+// Learn function syntax and recursive algorithms
+
+fn main() {
+    print("=== Functions and Recursion Demo ===")
+    print("")
+    
+    // Simple functions
+    print("1. Basic Functions:")
+    let result = add(5, 3)
+    print("   5 + 3 =", result)
+    print("")
+    
+    // Functions with return types
+    print("2. Factorial (Recursive):")
+    for i in 1..7 {
+        let fact = factorial(i)
+        print("   " + i + "! =", fact)
+    }
+    print("")
+    
+    // Fibonacci sequence
+    print("3. Fibonacci Sequence:")
+    print("   ", end="")
+    for i in 0..10 {
+        print(fibonacci(i), end=" ")
+    }
+    print("")
+    print("")
+    
+    // Higher-order functions (functions that take functions)
+    print("4. Higher-Order Functions:")
+    let numbers = [1, 2, 3, 4, 5]
+    let doubled = map_array(numbers, double)
+    print("   Original:", numbers)
+    print("   Doubled: ", doubled)
+    print("")
+    
+    // Anonymous functions / closures
+    print("5. Power Function:")
+    let square = power(2)
+    let cube = power(3)
+    print("   5 squared:", square(5))
+    print("   3 cubed:  ", cube(3))
+}
+
+// Basic function
+fn add(a, b) {
+    return a + b
+}
+
+// Recursive factorial
+fn factorial(n) {
+    if n <= 1 {
+        return 1
+    }
+    return n * factorial(n - 1)
+}
+
+// Recursive Fibonacci
+fn fibonacci(n) {
+    if n <= 1 {
+        return n
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+// Higher-order function
+fn map_array(arr, func) {
+    let result = []
+    for item in arr {
+        result.push(func(item))
+    }
+    return result
+}
+
+fn double(x) {
+    return x * 2
+}
+
+// Function that returns a function (closure)
+fn power(exponent) {
+    fn pow_func(base) {
+        let result = 1
+        for i in 0..exponent {
+            result = result * base
+        }
+        return result
+    }
+    return pow_func
+}
+
+main()
+

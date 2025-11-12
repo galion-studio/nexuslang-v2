@@ -1,0 +1,51 @@
+// NexusLang v2 - Knowledge Demo
+// Demonstrates knowledge base integration
+
+fn main() {
+    print("=== NexusLang v2 Knowledge Demo ===")
+    print("")
+    
+    // Query knowledge base
+    print("🔍 Querying Grokopedia...")
+    let facts = knowledge("quantum mechanics")
+    
+    if facts.length > 0 {
+        print("✅ Found", facts.length, "facts")
+        print("")
+        
+        // Display first 3 results
+        for i in 0..min(3, facts.length) {
+            let fact = facts[i]
+            print_fact(fact, i + 1)
+        }
+    } else {
+        print("❌ No knowledge found")
+    }
+    
+    print("")
+    
+    // Get related concepts
+    print("🔗 Related Concepts:")
+    let related = knowledge_related("quantum mechanics")
+    
+    for concept in related.slice(0, 5) {
+        print("  -", concept)
+    }
+}
+
+fn print_fact(fact, number) {
+    let verified = if fact.verified then "✓" else "?"
+    
+    print(number + ". " + verified + " " + fact.title)
+    print("   Summary:", fact.summary)
+    print("   Confidence:", fact.confidence)
+    print("")
+}
+
+fn min(a, b) {
+    return if a < b then a else b
+}
+
+// Run
+main()
+

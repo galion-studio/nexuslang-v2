@@ -1,0 +1,49 @@
+// Example 4: Build a Neural Network
+// NexusLang makes ML simple with built-in features
+
+fn main() {
+    print("=== Neural Network Demo ===")
+    print("")
+    
+    // Define a simple feedforward network
+    // Input: 784 (28x28 image)
+    // Hidden: 128 neurons
+    // Output: 10 classes (digits 0-9)
+    
+    print("🧠 Creating Neural Network...")
+    let model = Sequential(
+        Linear(784, 128),
+        ReLU(),
+        Linear(128, 64),
+        ReLU(),
+        Linear(64, 10),
+        Softmax()
+    )
+    
+    print("✅ Model created!")
+    print("")
+    print("Architecture:")
+    print("  Input Layer:   784 neurons (28x28 pixels)")
+    print("  Hidden Layer 1: 128 neurons (ReLU)")
+    print("  Hidden Layer 2:  64 neurons (ReLU)")
+    print("  Output Layer:    10 neurons (Softmax)")
+    print("")
+    
+    // Create sample input (random pixel values)
+    print("📊 Creating sample input...")
+    let input = randn(1, 784)  // Random normal distribution
+    
+    print("✅ Input shape: [1, 784]")
+    print("")
+    
+    print("🚀 Model ready for training!")
+    print("")
+    print("Next steps:")
+    print("  1. Load training data")
+    print("  2. Define loss function")
+    print("  3. Choose optimizer")
+    print("  4. Train the model")
+}
+
+main()
+

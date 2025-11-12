@@ -483,9 +483,9 @@ chmod +x deploy-everything-automated.sh && \
 ```
 
 **Have ready:**
-- OpenAI key
-- Cloudflare API Token
-- Cloudflare Zone ID
+- OpenRouter API key (primary - https://openrouter.ai/keys)
+- Cloudflare API Token (https://dash.cloudflare.com/profile/api-tokens)
+- Cloudflare Zone ID (from Cloudflare dashboard)
 
 **Then sit back and watch the magic happen!** ✨
 

@@ -56,10 +56,9 @@ chmod +x setup-production-env.sh deploy-to-runpod-production.sh test-production-
 ./setup-production-env.sh
 ```
 
-**When prompted for OpenAI key, enter:**
-```
-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
-```
+**When prompted for keys, enter:**
+- OpenRouter API key (primary - get from https://openrouter.ai/keys)
+- Or OpenAI API key (fallback - get from https://platform.openai.com/api-keys)
 
 This creates:
 - `v2/.env` with secure secrets (NOT in git)

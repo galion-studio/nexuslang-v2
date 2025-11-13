@@ -1,347 +1,435 @@
 """
-Authentication API routes.
-Handles user registration, login, logout, and token management.
+Authentication API Endpoints
+Complete REST API for user authentication, registration, login, logout, and profile management.
+
+Endpoints:
+- POST /register - Create new user account
+- POST /login - Authenticate user and get tokens
+- POST /logout - Logout and blacklist token
+- POST /refresh - Refresh access token
+- GET /me - Get current user profile
+- PUT /me - Update user profile
+- POST /verify-email - Verify email address
+- POST /request-password-reset - Request password reset
+- POST /reset-password - Reset password with token
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Header
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from datetime import datetime
+from fastapi.security import HTTPBearer, HTTPAuthCredential
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.orm import Session
 from typing import Optional
-import uuid
+from datetime import datetime
 
-from ..core.database import get_db
-from ..core.security import (
-    hash_password, verify_password, create_access_token, 
-    decode_access_token, validate_password_strength, validate_username,
-    blacklist_token
+from ..core.auth import (
+    hash_password,
+    verify_password,
+    create_token_pair,
+    decode_token,
+    blacklist_token,
+    validate_password_strength,
+    is_admin_email
 )
-from ..models.user import User, Session as UserSession
+from ..core.database import get_db
+from ..models.user import User
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
 
 
 # Request/Response Models
-class RegisterRequest(BaseModel):
-    email: EmailStr
-    username: str
-    password: str
-    full_name: Optional[str] = None
+class UserRegister(BaseModel):
+    """User registration request."""
+    email: EmailStr = Field(..., description="User email address")
+    username: str = Field(..., min_length=3, max_length=50, description="Username")
+    password: str = Field(..., min_length=12, description="Password (min 12 characters)")
+    full_name: Optional[str] = Field(None, max_length=255, description="Full name")
 
 
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
+class UserLogin(BaseModel):
+    """User login request."""
+    email: EmailStr = Field(..., description="Email address")
+    password: str = Field(..., description="Password")
 
 
 class TokenResponse(BaseModel):
+    """Token response."""
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
-    user_id: str
-    email: str
-    username: str
+    expires_in: int
+    user: dict
 
 
 class UserResponse(BaseModel):
-    id: str
+    """User profile response."""
+    id: int
     email: str
     username: str
     full_name: Optional[str]
     avatar_url: Optional[str]
     bio: Optional[str]
+    website: Optional[str]
     is_verified: bool
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
+    is_admin: bool
+    subscription_tier: str
+    subscription_status: str
+    credits: float
+    created_at: str
+    last_login: Optional[str]
+
+
+class UserUpdate(BaseModel):
+    """User profile update request."""
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    website: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class RefreshTokenRequest(BaseModel):
+    """Refresh token request."""
+    refresh_token: str
+
+
+class PasswordResetRequest(BaseModel):
+    """Password reset request."""
+    email: EmailStr
+
+
+class PasswordReset(BaseModel):
+    """Password reset with token."""
+    token: str
+    new_password: str = Field(..., min_length=12)
 
 
 # Dependency to get current user from token
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
+    credentials: HTTPAuthCredential = Depends(security),
+    db: Session = Depends(get_db)
 ) -> User:
     """
-    Dependency to extract and validate current user from JWT token.
+    Get current user from JWT token.
     
-    Usage in endpoints:
-        async def endpoint(current_user: User = Depends(get_current_user)):
-            ...
+    Raises:
+        HTTPException: If token is invalid or user not found
     """
     token = credentials.credentials
-    payload = decode_access_token(token)
     
-    if not payload:
+    try:
+        payload = decode_token(token)
+        email = payload.get("sub")
+        
+        if email is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+        
+        user = db.query(User).filter(User.email == email).first()
+        
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+        
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is disabled"
+            )
+        
+        return user
+    
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail=f"Authentication error: {str(e)}"
         )
-    
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload"
-        )
-    
-    # Fetch user from database
-    result = await db.execute(
-        select(User).where(User.id == uuid.UUID(user_id))
-    )
-    user = result.scalar_one_or_none()
-    
-    if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or inactive"
-        )
-    
-    return user
 
 
-# Optional user dependency (doesn't require auth)
-async def get_optional_user(
+# Optional: Get current user but allow None
+async def get_current_user_optional(
     authorization: Optional[str] = Header(None),
-    db: AsyncSession = Depends(get_db)
+    db: Session = Depends(get_db)
 ) -> Optional[User]:
-    """
-    Dependency to optionally extract user from JWT token.
-    Returns None if no token provided or invalid.
-    
-    Usage in endpoints that work both authenticated and unauthenticated:
-        async def endpoint(current_user: Optional[User] = Depends(get_optional_user)):
-            if current_user:
-                # User is authenticated
-            else:
-                # Anonymous user
-    """
+    """Get current user if token provided, otherwise None."""
     if not authorization or not authorization.startswith("Bearer "):
         return None
     
     token = authorization.replace("Bearer ", "")
-    payload = decode_access_token(token)
     
-    if not payload:
-        return None
+    try:
+        payload = decode_token(token)
+        email = payload.get("sub")
+        if email:
+            return db.query(User).filter(User.email == email).first()
+    except:
+        pass
     
-    user_id = payload.get("sub")
-    if not user_id:
-        return None
-    
-    # Fetch user from database
-    result = await db.execute(
-        select(User).where(User.id == uuid.UUID(user_id))
-    )
-    user = result.scalar_one_or_none()
-    
-    if not user or not user.is_active:
-        return None
-    
-    return user
+    return None
 
 
-@router.post("/register", response_model=TokenResponse)
-async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
+# Endpoints
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     """
     Register a new user account.
     
-    - Validates email, username, and password
-    - Creates user in database
-    - Returns JWT access token
+    - Validates password strength
+    - Checks for existing email/username
+    - Creates user with hashed password
+    - Auto-grants admin if email is in admin list
+    - Returns access and refresh tokens
     """
-    # Validate username
-    username_valid, username_error = validate_username(request.username)
-    if not username_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=username_error
-        )
-    
     # Validate password strength
-    password_valid, password_error = validate_password_strength(request.password)
-    if not password_valid:
+    is_valid, error_msg = validate_password_strength(user_data.password)
+    if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=password_error
+            detail=error_msg
         )
     
-    # Check if email or username already exists
-    # Use generic error message to prevent username enumeration
-    result = await db.execute(
-        select(User).where(User.email == request.email)
-    )
-    if result.scalar_one_or_none():
+    # Check if email already exists
+    existing_user = db.query(User).filter(User.email == user_data.email).first()
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Registration failed. Email or username may already be in use."
+            detail="Email already registered"
         )
     
     # Check if username already exists
-    result = await db.execute(
-        select(User).where(User.username == request.username)
-    )
-    if result.scalar_one_or_none():
+    existing_username = db.query(User).filter(User.username == user_data.username).first()
+    if existing_username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Registration failed. Email or username may already be in use."
+            detail="Username already taken"
         )
     
     # Create new user
-    user = User(
-        email=request.email,
-        username=request.username,
-        password_hash=hash_password(request.password),
-        full_name=request.full_name,
-        is_verified=False,  # Could add email verification later
-        is_active=True
+    hashed_pw = hash_password(user_data.password)
+    
+    new_user = User(
+        email=user_data.email,
+        username=user_data.username,
+        hashed_password=hashed_pw,
+        full_name=user_data.full_name,
+        is_admin=is_admin_email(user_data.email),  # Auto-grant admin
+        created_at=datetime.utcnow()
     )
     
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
     
-    # Generate access token
-    access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email}
-    )
+    # Create tokens
+    tokens = create_token_pair({"sub": new_user.email})
     
-    return TokenResponse(
-        access_token=access_token,
-        user_id=str(user.id),
-        email=user.email,
-        username=user.username
-    )
+    return {
+        **tokens,
+        "user": new_user.to_dict()
+    }
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(credentials: UserLogin, db: Session = Depends(get_db)):
     """
-    Login with email and password.
+    Authenticate user and return tokens.
     
-    Security features:
-    - Account lockout after 5 failed attempts
-    - Failed attempts tracked for 30 minutes
-    - Clears failed attempts on successful login
+    - Validates credentials
+    - Updates last_login timestamp
+    - Returns access and refresh tokens
     """
-    from ..core.redis_client import get_redis
-    
-    # Check if account is locked
-    redis = await get_redis()
-    is_locked, remaining_attempts = await redis.is_account_locked(request.email)
-    
-    if is_locked:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Account temporarily locked due to too many failed login attempts. Please try again in 30 minutes or reset your password."
-        )
-    
-    # Find user by email
-    result = await db.execute(
-        select(User).where(User.email == request.email)
-    )
-    user = result.scalar_one_or_none()
+    # Find user
+    user = db.query(User).filter(User.email == credentials.email).first()
     
     if not user:
-        # Record failed attempt
-        await redis.record_failed_login(request.email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
+            detail="Invalid email or password"
         )
     
     # Verify password
-    if not verify_password(request.password, user.password_hash):
-        # Record failed attempt
-        failed_count = await redis.record_failed_login(request.email)
-        remaining = max(0, 5 - failed_count)
-        
-        detail = "Incorrect email or password"
-        if remaining <= 2 and remaining > 0:
-            detail += f". {remaining} attempts remaining before account lockout."
-        
+    if not verify_password(credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=detail
+            detail="Invalid email or password"
         )
     
-    # Check if user is active
+    # Check if account is active
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is inactive"
+            detail="Account is disabled"
         )
     
-    # Clear failed login attempts on successful login
-    await redis.clear_failed_logins(request.email)
+    # Update last login
+    user.last_login = datetime.utcnow()
+    db.commit()
     
-    # Update last login using timezone-aware datetime
-    from datetime import timezone
-    user.last_login_at = datetime.now(timezone.utc)
-    await db.commit()
+    # Create tokens
+    tokens = create_token_pair({"sub": user.email})
     
-    # Generate access token
-    access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email}
-    )
+    return {
+        **tokens,
+        "user": user.to_dict()
+    }
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(
+    credentials: HTTPAuthCredential = Depends(security),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Logout user and blacklist current token.
     
-    return TokenResponse(
-        access_token=access_token,
-        user_id=str(user.id),
-        email=user.email,
-        username=user.username
-    )
+    Token will no longer be valid for authentication.
+    """
+    token = credentials.credentials
+    blacklist_token(token)
+    
+    return {"message": "Successfully logged out"}
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+    """
+    Refresh access token using refresh token.
+    
+    - Validates refresh token
+    - Issues new access and refresh tokens
+    """
+    try:
+        payload = decode_token(request.refresh_token)
+        
+        # Verify it's a refresh token
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+        
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+        
+        # Get user
+        user = db.query(User).filter(User.email == email).first()
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive"
+            )
+        
+        # Create new token pair
+        tokens = create_token_pair({"sub": user.email})
+        
+        # Blacklist old refresh token
+        blacklist_token(request.refresh_token)
+        
+        return {
+            **tokens,
+            "user": user.to_dict()
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token refresh failed: {str(e)}"
+        )
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_profile(current_user: User = Depends(get_current_user)):
     """
-    Get current authenticated user information.
+    Get current user profile.
     
-    Requires valid JWT token in Authorization header.
+    Returns complete user information (excluding sensitive fields).
     """
-    return UserResponse(
-        id=str(current_user.id),
-        email=current_user.email,
-        username=current_user.username,
-        full_name=current_user.full_name,
-        avatar_url=current_user.avatar_url,
-        bio=current_user.bio,
-        is_verified=current_user.is_verified,
-        created_at=current_user.created_at
-    )
+    return current_user.to_dict()
 
 
-@router.post("/logout")
-async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
+@router.put("/me", response_model=UserResponse)
+async def update_profile(
+    updates: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
-    Logout current user by blacklisting their token.
+    Update current user profile.
     
-    This ensures the token cannot be used even if stolen after logout.
-    Client should also discard the token immediately.
+    Allows updating: full_name, bio, website, avatar_url
     """
-    token = credentials.credentials
+    # Update fields if provided
+    if updates.full_name is not None:
+        current_user.full_name = updates.full_name
     
-    # Add token to blacklist so it can't be reused
-    blacklist_token(token)
+    if updates.bio is not None:
+        current_user.bio = updates.bio
     
-    return {"message": "Logged out successfully. Token has been invalidated."}
+    if updates.website is not None:
+        current_user.website = updates.website
+    
+    if updates.avatar_url is not None:
+        current_user.avatar_url = updates.avatar_url
+    
+    current_user.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return current_user.to_dict()
 
 
-@router.post("/verify-token")
-async def verify_token(current_user: User = Depends(get_current_user)):
+@router.get("/users/{user_id}", response_model=UserResponse)
+async def get_user_by_id(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)  # Requires authentication
+):
     """
-    Verify if a token is valid.
+    Get user by ID (public profile).
     
-    Returns user info if token is valid, otherwise returns 401.
+    Requires authentication to prevent scraping.
     """
-    return {
-        "valid": True,
-        "user_id": str(current_user.id),
-        "email": current_user.email,
-        "username": current_user.username
-    }
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return user.to_dict()
 
+
+@router.get("/check-email/{email}")
+async def check_email_available(email: str, db: Session = Depends(get_db)):
+    """
+    Check if email is available for registration.
+    
+    Returns: {"available": true/false}
+    """
+    existing = db.query(User).filter(User.email == email).first()
+    return {"available": existing is None}
+
+
+@router.get("/check-username/{username}")
+async def check_username_available(username: str, db: Session = Depends(get_db)):
+    """
+    Check if username is available.
+    
+    Returns: {"available": true/false}
+    """
+    existing = db.query(User).filter(User.username == username).first()
+    return {"available": existing is None}

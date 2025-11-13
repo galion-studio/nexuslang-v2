@@ -1,27 +1,29 @@
-# NexusLang v2 Frontend - Dockerfile (Development)
+# Production Dockerfile for developer.galion.app Frontend
+# Next.js application
+
 FROM node:18-alpine
 
+# Set working directory
 WORKDIR /app
 
-# Install dependencies
-RUN apk add --no-cache libc6-compat
-
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci --only=production
 
-# Copy source code
+# Copy application code
 COPY . .
+
+# Build Next.js app
+RUN npm run build
 
 # Expose port
 EXPOSE 3000
 
-# Set environment
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV PORT 3000
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
 
-# Run development server
-CMD ["npm", "run", "dev"]
-
+# Run application
+CMD ["npm", "start", "--", "--port", "3000"]

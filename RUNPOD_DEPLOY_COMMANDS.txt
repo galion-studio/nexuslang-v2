@@ -1,0 +1,64 @@
+# =============================================================================
+# RUNPOD DEPLOYMENT COMMANDS
+# Copy these commands into your RunPod terminal
+# =============================================================================
+
+# Step 1: Make scripts executable
+cd /workspace
+chmod +x startup.sh health-check.sh rollback.sh deploy.sh quick-deploy-runpod.sh
+chmod +x nexus-supervisor.py
+
+# Step 2: Install backend dependencies
+cd /workspace/project-nexus/v2/backend
+pip3 install -r requirements.txt
+
+# Step 3: Initialize database (if not already done)
+psql -U nexus -d nexus_db -f migrations/001_initial_schema.sql 2>/dev/null || echo "Migrations already applied"
+
+# Step 4: Seed database with admin user
+python3 scripts/seed_database.py
+
+# Step 5: Stop any running services
+pkill -f "uvicorn main:app" || true
+pkill -f "next start" || true
+
+# Step 6: Start all services
+cd /workspace
+./startup.sh
+
+# =============================================================================
+# After services start, verify deployment:
+# =============================================================================
+
+./health-check.sh
+
+# Test endpoints:
+curl http://localhost:8000/health
+curl http://localhost:3000
+curl http://localhost:3001
+
+# View logs if needed:
+tail -f /workspace/logs/backend.log
+
+# =============================================================================
+# Your platforms are now live!
+# =============================================================================
+
+# Local access:
+# - Backend API: http://localhost:8000
+# - API Docs: http://localhost:8000/docs
+# - developer.galion.app: http://localhost:3000
+# - galion.studio: http://localhost:3001
+
+# Public access (replace POD-ID with your RunPod container ID):
+# - Backend: https://POD-ID-8000.proxy.runpod.net
+# - Developer: https://POD-ID-3000.proxy.runpod.net
+# - Studio: https://POD-ID-3001.proxy.runpod.net
+
+# Admin credentials:
+# Email: maci.grajczyk@gmail.com
+# Password: Admin123!@#SecurePassword
+# (CHANGE THIS AFTER FIRST LOGIN!)
+
+# =============================================================================
+

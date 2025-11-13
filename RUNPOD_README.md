@@ -1,164 +1,212 @@
-# 🎮 RunPod Deployment - NexusLang v2
+# 🚀 RunPod Deployment - Quick Start
 
-**Deploy your AI platform in 10 minutes with GPU acceleration!**
+Deploy the entire Galion Ecosystem to RunPod in **one command**!
 
 ---
 
-## 🚀 Quick Deploy (3 Steps)
-
-### Step 1: Create RunPod Pod (3 minutes)
-
-1. Go to https://runpod.io
-2. Create account + add $10 credit
-3. Click "Deploy" → Choose GPU:
-   - **RTX 3070** - $0.29/hour (recommended for dev)
-   - **RTX 4090** - $0.69/hour (recommended for production)
-4. Set **Container Disk: 50GB**, **Volume: 100GB**
-5. **Expose Ports:** 3000, 8000
-6. Click "Deploy"
-
-### Step 2: Connect & Deploy (5 minutes)
+## ⚡ Quick Deploy (1 Command)
 
 ```bash
-# SSH to pod (get command from RunPod console)
-ssh root@ssh.runpod.io -p YOUR_PORT
-
-# Clone and deploy
-cd /workspace
-git clone https://github.com/your-org/project-nexus.git
-cd project-nexus
-
-# Configure
-cp env.runpod.template .env
-nano .env  # Add your OpenAI API key
-
-# Deploy!
-chmod +x runpod-deploy.sh
-./runpod-deploy.sh
+curl -fsSL https://raw.githubusercontent.com/yourusername/project-nexus/main/RUNPOD_AUTO_DEPLOY_COMPLETE.sh | bash
 ```
 
-### Step 3: Access & Test (2 minutes)
+**Or if you have the files locally**:
 
 ```bash
-# Get your URLs
-cat /workspace/RUNPOD_URLS.txt
-
-# Open in browser
-# https://YOUR_POD_ID-3000.proxy.runpod.net
+bash RUNPOD_AUTO_DEPLOY_COMPLETE.sh
 ```
 
-**That's it! Your platform is live!** 🎉
+---
+
+## 🎯 What Gets Deployed
+
+✅ **Complete Backend** (50+ API endpoints)  
+✅ **Frontend Platform** (developer.galion.app)  
+✅ **Galion Studio** (creative tools)  
+✅ **PostgreSQL Database** (auto-configured)  
+✅ **Redis Cache** (ready to use)  
+✅ **LocalTunnel** (public URLs)  
+✅ **Monitoring** (health checks & dashboard)  
+✅ **Auto-restart** (service supervisor)  
+✅ **Backups** (automated system)  
 
 ---
 
-## 💰 Costs
+## 📱 Access URLs
 
-| Usage | GPU | Hours/Month | Cost/Month |
-|-------|-----|-------------|------------|
-| **Light Dev** | RTX 3070 | 120 (4hrs/day) | $35 |
-| **Heavy Dev** | RTX 3070 | 240 (8hrs/day) | $70 |
-| **Production 24/7** | RTX 4090 Spot | 720 | $208 |
+After deployment (in ~10 minutes):
 
-**Stop pod when not using = $0**
+- **Backend**: https://nexuslang-backend.loca.lt/docs
+- **Frontend**: https://nexuslang-frontend.loca.lt
+- **Studio**: https://nexuslang-studio.loca.lt
 
----
-
-## ✨ What You Get
-
-### GPU-Accelerated
-- ⚡ Whisper STT: 10-30x faster
-- ⚡ TTS: 5-10x faster
-- ⚡ Real-time voice processing
-- ⚡ Instant model loading (after cache)
-
-### Automatic
-- 🔒 HTTPS (no configuration!)
-- 🌐 Public URLs (share immediately!)
-- 💾 Persistent storage (/workspace)
-- 🔄 Auto-restart on failure
-
-### Complete Platform
-- ✅ Web IDE with code execution
-- ✅ Knowledge base with AI search
-- ✅ Voice recording/playback
-- ✅ Billing system
-- ✅ Community features
+**Password**: `213.173.105.83`
 
 ---
 
-## 🎯 Quick Commands
+## 🎛️ Quick Commands
 
 ```bash
-# View logs
-docker-compose -f docker-compose.runpod.yml logs -f
-
-# Restart services
-docker-compose -f docker-compose.runpod.yml restart
-
-# Check health
-curl http://localhost:8000/health
-
-# Monitor GPU
-nvidia-smi
-
-# Stop (save money!)
-docker-compose -f docker-compose.runpod.yml stop
-
-# Start again
-docker-compose -f docker-compose.runpod.yml start
+galion-start     # Start all services
+galion-stop      # Stop all services
+galion-restart   # Restart all services
+galion-health    # Check service health
+galion-logs      # View live logs
 ```
 
 ---
 
-## 📚 Full Guides
+## 📊 Monitoring
 
-- **🎮_DEPLOY_TO_RUNPOD_NOW.md** - Ultra-quick start
-- **🎮_RUNPOD_QUICK_START.md** - Detailed guide
-- **v2/RUNPOD_DEPLOYMENT_GUIDE.md** - Complete reference
+Real-time dashboard:
 
----
-
-## 🆘 Issues?
-
-### Can't connect to pod
-Wait 2-3 minutes after creation
-
-### GPU not found
 ```bash
-nvidia-smi  # Should show your GPU
+python3 runpod_monitor_dashboard.py
 ```
 
-### Services won't start
+Shows:
+- Service status
+- Resource usage
+- Recent logs
+- Public URLs
+
+---
+
+## 💾 Backup
+
+Run backup:
+
 ```bash
-docker-compose -f docker-compose.runpod.yml logs
+bash runpod_backup.sh
 ```
 
-### Need help
-- RunPod Discord: https://discord.gg/runpod
-- RunPod Docs: https://docs.runpod.io
+Backups saved to: `/workspace/backups/`
 
 ---
 
-## 🎊 Success!
+## 🔑 Admin Login
 
-Once deployed, share your URL:
+**Email**: maci.grajczyk@gmail.com  
+**Password**: Admin123!@#SecurePassword
 
-```
-https://YOUR_POD_ID-3000.proxy.runpod.net
-```
-
-**Features working:**
-- ✅ Web IDE
-- ✅ Code execution
-- ✅ Knowledge search
-- ✅ Voice features (GPU!)
-- ✅ User accounts
-- ✅ Billing system
-- ✅ Community
-
-**Ready for beta testing!** 🚀
+⚠️ Change after first login!
 
 ---
 
-**NexusLang v2 • RunPod Optimized • GPU Powered • Launch Ready**
+## 📚 Full Documentation
 
+See `🚀_RUNPOD_DEPLOYMENT_COMPLETE.md` for:
+- Detailed setup instructions
+- Troubleshooting guide
+- Security best practices
+- Performance optimization
+- Scaling strategies
+
+---
+
+## 🆘 Troubleshooting
+
+### Services not starting?
+
+```bash
+galion-stop
+sleep 5
+galion-start
+```
+
+### Check logs:
+
+```bash
+galion-logs
+```
+
+### Health check:
+
+```bash
+galion-health
+```
+
+---
+
+## 🎉 Features Included
+
+### AI Generation:
+- Chat (30+ models)
+- Image (DALL-E, Stable Diffusion)
+- Video (RunwayML, Stability AI)
+- Text (7 templates)
+- Voice (TTS/STT)
+
+### Platform Features:
+- Project Management
+- Team Collaboration
+- Analytics Dashboard
+- Credit System
+- API Documentation
+
+---
+
+## ⏱️ Deployment Time
+
+- **Installation**: ~5 minutes
+- **Configuration**: ~2 minutes
+- **Service Startup**: ~3 minutes
+- **Total**: ~10 minutes
+
+---
+
+## 📈 What's Next?
+
+1. ✅ Deploy (you're here!)
+2. 🔑 Add API keys for real AI
+3. 🧪 Test all features
+4. 🌐 Configure custom domain
+5. 📊 Monitor usage
+6. 👥 Invite users
+7. 🚀 Scale as needed
+
+---
+
+## 🎯 Success Criteria
+
+After deployment, you should have:
+
+- ✅ 3 public URLs working
+- ✅ Admin login functional
+- ✅ API docs accessible
+- ✅ All health checks passing
+- ✅ Logs being written
+- ✅ Quick commands working
+
+---
+
+## 💡 Pro Tips
+
+1. **Add API keys** for production AI features
+2. **Schedule backups** with cron
+3. **Monitor resources** with dashboard
+4. **Use quick commands** for easy management
+5. **Check logs** regularly
+
+---
+
+## 📞 Support
+
+**View deployment info**:
+```bash
+cat /workspace/DEPLOYMENT_INFO.txt
+```
+
+**Check system status**:
+```bash
+galion-health
+```
+
+**View all documentation**:
+```bash
+ls -la /workspace/project-nexus/*.md
+```
+
+---
+
+🎉 **DEPLOY AND GO LIVE IN MINUTES!** 🎉

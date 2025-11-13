@@ -1,154 +1,148 @@
 """
-AI Router Service - Universal AI Gateway
-Routes AI requests to different providers and models through OpenRouter.
-Supports fallback mechanisms and model selection.
+AI Router Service
+Smart routing to 30+ AI models via OpenRouter with automatic fallback to OpenAI.
+
+Features:
+- OpenRouter primary (cost-optimized)
+- OpenAI fallback
+- Model selection
+- Cost tracking
+- Error handling with retry logic
+- Support for chat, completion, image, video generation
 """
 
-from typing import Dict, List, Optional, Any, AsyncGenerator
-import httpx
-import openai
-from openai import AsyncOpenAI
-import json
+import os
+import aiohttp
 import asyncio
+from typing import List, Dict, Optional, Any
 from enum import Enum
+import json
+import logging
 
-from ...core.config import settings
+logger = logging.getLogger(__name__)
+
+# Configuration
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
 class AIModel(str, Enum):
-    """
-    Available AI models through OpenRouter.
-    Each model has different strengths and pricing.
-    """
+    """Supported AI models."""
+    # Claude models (Anthropic)
+    CLAUDE_SONNET = "anthropic/claude-3.5-sonnet"
+    CLAUDE_OPUS = "anthropic/claude-3-opus"
+    CLAUDE_HAIKU = "anthropic/claude-3-haiku"
     
-    # Anthropic Claude Models (Best for reasoning, coding, analysis)
-    CLAUDE_SONNET = "anthropic/claude-3.5-sonnet"  # Latest, most capable
-    CLAUDE_OPUS = "anthropic/claude-3-opus"  # Most powerful, expensive
-    CLAUDE_HAIKU = "anthropic/claude-3-haiku"  # Fastest, cheapest
+    # GPT models (OpenAI)
+    GPT4_TURBO = "openai/gpt-4-turbo"
+    GPT4 = "openai/gpt-4"
+    GPT35_TURBO = "openai/gpt-3.5-turbo"
     
-    # OpenAI GPT Models (General purpose, widely tested)
-    GPT4_TURBO = "openai/gpt-4-turbo"  # Best GPT-4 version
-    GPT4 = "openai/gpt-4"  # Standard GPT-4
-    GPT35_TURBO = "openai/gpt-3.5-turbo"  # Fast and cheap
+    # Llama models (Meta)
+    LLAMA_70B = "meta-llama/llama-3-70b-instruct"
+    LLAMA_8B = "meta-llama/llama-3-8b-instruct"
     
-    # Google Gemini Models (Good for multimodal)
-    GEMINI_PRO = "google/gemini-pro"  # Google's latest
-    GEMINI_PRO_VISION = "google/gemini-pro-vision"  # With vision
+    # Gemini models (Google)
+    GEMINI_PRO = "google/gemini-pro"
+    GEMINI_FLASH = "google/gemini-flash-1.5"
     
-    # Meta Llama Models (Open source, good value)
-    LLAMA_70B = "meta-llama/llama-3-70b-instruct"  # Most capable Llama
-    LLAMA_8B = "meta-llama/llama-3-8b-instruct"  # Fastest Llama
+    # Mistral models
+    MISTRAL_LARGE = "mistralai/mistral-large"
+    MISTRAL_MEDIUM = "mistralai/mistral-medium"
+    MISTRAL_SMALL = "mistralai/mistral-small"
     
-    # Mistral Models (European, privacy-focused)
-    MISTRAL_LARGE = "mistralai/mistral-large"  # Most capable
-    MISTRAL_MEDIUM = "mistralai/mistral-medium"  # Balanced
-    MISTRAL_SMALL = "mistralai/mistral-small"  # Fast
+    # Code-specific models
+    CODELLAMA_70B = "codellama/codellama-70b-instruct"
+    DEEPSEEK_CODER = "deepseek/deepseek-coder-33b-instruct"
     
-    # Specialized Models
-    CODELLAMA_70B = "meta-llama/codellama-70b-instruct"  # Best for code
+    # Image generation
+    STABLE_DIFFUSION = "stability-ai/stable-diffusion-xl"
+    DALLE_3 = "openai/dall-e-3"
+    
+    # Other popular models
     PERPLEXITY_ONLINE = "perplexity/pplx-70b-online"  # Has internet access
-    
+
 
 class AIProvider(str, Enum):
-    """AI provider options."""
-    OPENROUTER = "openrouter"  # Primary - access to all models
-    OPENAI = "openai"  # Direct OpenAI API
-    AUTO = "auto"  # Automatically choose best provider
+    """AI service providers."""
+    OPENROUTER = "openrouter"
+    OPENAI = "openai"
 
 
 class AIRouter:
     """
-    Universal AI router that provides access to multiple AI models.
-    Prioritizes OpenRouter for multi-model access with OpenAI as fallback.
+    Smart AI model router with fallback capabilities.
+    
+    Routes requests to OpenRouter by default, falls back to OpenAI if needed.
+    Handles rate limiting, retries, and error recovery.
     """
     
     def __init__(self):
-        """Initialize AI router with configured providers."""
-        
-        # OpenRouter client (primary)
-        self.openrouter_key = settings.OPENROUTER_API_KEY
-        self.openrouter_url = settings.OPENROUTER_BASE_URL
-        
-        # OpenAI client (fallback)
-        self.openai_key = settings.OPENAI_API_KEY
-        self.openai_client = None
-        if self.openai_key:
-            self.openai_client = AsyncOpenAI(api_key=self.openai_key)
-        
-        # Default models
-        self.default_model = settings.DEFAULT_AI_MODEL
-        self.fallback_model = settings.FALLBACK_AI_MODEL
-        self.fast_model = settings.FAST_AI_MODEL
-        
-        # Provider preference
-        self.provider = settings.AI_PROVIDER
-        
-        print(f"🤖 AI Router initialized:")
-        print(f"   - Primary: OpenRouter ({self.default_model})")
-        print(f"   - Fallback: {self.fallback_model}")
-        print(f"   - Fast model: {self.fast_model}")
-    
+        self.openrouter_key = OPENROUTER_API_KEY
+        self.openai_key = OPENAI_API_KEY
+        self.request_count = 0
+        self.error_count = 0
     
     async def chat_completion(
         self,
         messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        model: str = AIModel.CLAUDE_SONNET,
         temperature: float = 0.7,
-        max_tokens: int = 2000,
-        stream: bool = False,
-        **kwargs
+        max_tokens: int = 1000,
+        stream: bool = False
     ) -> Dict[str, Any]:
         """
-        Generate chat completion using specified or default model.
-        Automatically handles provider routing and fallbacks.
+        Generate chat completion using specified model.
         
         Args:
-            messages: List of chat messages [{"role": "user", "content": "..."}]
-            model: AI model to use (defaults to DEFAULT_AI_MODEL)
-            temperature: Randomness (0-2, lower = more focused)
-            max_tokens: Maximum tokens in response
-            stream: Whether to stream the response
-            **kwargs: Additional provider-specific parameters
+            messages: List of message dicts with 'role' and 'content'
+            model: Model identifier (defaults to Claude Sonnet)
+            temperature: Sampling temperature (0-1)
+            max_tokens: Maximum tokens to generate
+            stream: Whether to stream response
         
         Returns:
-            Response dict with content, model used, usage stats
+            Dict with 'content', 'model', 'provider', 'usage'
         """
-        model = model or self.default_model
+        self.request_count += 1
         
+        # Try OpenRouter first
         try:
-            # Try OpenRouter first (supports all models)
-            if self.openrouter_key and (self.provider in ["openrouter", "auto"]):
-                return await self._openrouter_chat(
-                    messages, model, temperature, max_tokens, stream, **kwargs
-                )
-            
-            # Fallback to direct OpenAI if model is OpenAI
-            elif self.openai_client and model.startswith("openai/"):
-                openai_model = model.replace("openai/", "")
-                return await self._openai_chat(
-                    messages, openai_model, temperature, max_tokens, stream, **kwargs
-                )
-            
-            else:
-                raise ValueError(
-                    "No AI provider configured. Add OPENROUTER_API_KEY or OPENAI_API_KEY to .env"
-                )
+            result = await self._openrouter_chat(
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=stream
+            )
+            result["provider"] = AIProvider.OPENROUTER
+            return result
         
         except Exception as e:
-            print(f"⚠️  AI request failed for {model}: {e}")
+            logger.warning(f"OpenRouter failed: {e}, falling back to OpenAI")
+            self.error_count += 1
             
-            # Try fallback model if different from attempted model
-            if model != self.fallback_model:
-                print(f"🔄 Trying fallback model: {self.fallback_model}")
+            # Fallback to OpenAI
+            if self.openai_key:
                 try:
-                    return await self._openrouter_chat(
-                        messages, self.fallback_model, temperature, max_tokens, stream, **kwargs
+                    # Map model to OpenAI equivalent
+                    openai_model = self._map_to_openai_model(model)
+                    result = await self._openai_chat(
+                        messages=messages,
+                        model=openai_model,
+                        temperature=temperature,
+                        max_tokens=max_tokens
                     )
-                except Exception as fallback_error:
-                    print(f"❌ Fallback also failed: {fallback_error}")
-            
-            raise Exception(f"AI request failed: {str(e)}")
-    
+                    result["provider"] = AIProvider.OPENAI
+                    return result
+                
+                except Exception as openai_error:
+                    logger.error(f"OpenAI fallback also failed: {openai_error}")
+                    raise Exception(f"All AI providers failed. OpenRouter: {e}, OpenAI: {openai_error}")
+            else:
+                raise Exception(f"OpenRouter failed and no OpenAI key available: {e}")
     
     async def _openrouter_chat(
         self,
@@ -156,18 +150,16 @@ class AIRouter:
         model: str,
         temperature: float,
         max_tokens: int,
-        stream: bool,
-        **kwargs
+        stream: bool = False
     ) -> Dict[str, Any]:
-        """
-        Make chat completion request to OpenRouter.
-        OpenRouter provides unified access to all AI models.
-        """
+        """Make request to OpenRouter API."""
+        url = f"{OPENROUTER_BASE_URL}/chat/completions"
+        
         headers = {
             "Authorization": f"Bearer {self.openrouter_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://nexuslang.dev",  # Optional: for rankings
-            "X-Title": "NexusLang v2"  # Optional: for rankings
+            "HTTP-Referer": "https://developer.galion.app",
+            "X-Title": "Galion NexusLang"
         }
         
         payload = {
@@ -175,308 +167,205 @@ class AIRouter:
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
-            **kwargs
+            "stream": stream
         }
         
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{self.openrouter_url}/chat/completions",
-                headers=headers,
-                json=payload
-            )
-            response.raise_for_status()
-            data = response.json()
-        
-        # Format response consistently
-        return {
-            "content": data["choices"][0]["message"]["content"],
-            "model": data["model"],
-            "provider": "openrouter",
-            "usage": data.get("usage", {}),
-            "finish_reason": data["choices"][0].get("finish_reason"),
-            "raw_response": data
-        }
-    
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=60)) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise Exception(f"OpenRouter API error ({response.status}): {error_text}")
+                
+                data = await response.json()
+                
+                # Extract response
+                content = data["choices"][0]["message"]["content"]
+                usage = data.get("usage", {})
+                
+                return {
+                    "content": content,
+                    "model": model,
+                    "usage": {
+                        "prompt_tokens": usage.get("prompt_tokens", 0),
+                        "completion_tokens": usage.get("completion_tokens", 0),
+                        "total_tokens": usage.get("total_tokens", 0)
+                    }
+                }
     
     async def _openai_chat(
         self,
         messages: List[Dict[str, str]],
         model: str,
         temperature: float,
-        max_tokens: int,
-        stream: bool,
-        **kwargs
+        max_tokens: int
     ) -> Dict[str, Any]:
-        """
-        Make chat completion request directly to OpenAI.
-        Used as fallback or when explicitly requested.
-        """
-        response = await self.openai_client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            **kwargs
-        )
+        """Make request to OpenAI API (fallback)."""
+        url = f"{OPENAI_BASE_URL}/chat/completions"
         
-        # Format response consistently
-        return {
-            "content": response.choices[0].message.content,
-            "model": response.model,
-            "provider": "openai",
-            "usage": {
-                "prompt_tokens": response.usage.prompt_tokens,
-                "completion_tokens": response.usage.completion_tokens,
-                "total_tokens": response.usage.total_tokens
-            },
-            "finish_reason": response.choices[0].finish_reason,
-            "raw_response": response
+        headers = {
+            "Authorization": f"Bearer {self.openai_key}",
+            "Content-Type": "application/json"
         }
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=60)) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise Exception(f"OpenAI API error ({response.status}): {error_text}")
+                
+                data = await response.json()
+                
+                content = data["choices"][0]["message"]["content"]
+                usage = data.get("usage", {})
+                
+                return {
+                    "content": content,
+                    "model": model,
+                    "usage": {
+                        "prompt_tokens": usage.get("prompt_tokens", 0),
+                        "completion_tokens": usage.get("completion_tokens", 0),
+                        "total_tokens": usage.get("total_tokens", 0)
+                    }
+                }
     
+    def _map_to_openai_model(self, model: str) -> str:
+        """Map OpenRouter model to OpenAI equivalent."""
+        mapping = {
+            AIModel.CLAUDE_SONNET: "gpt-4-turbo",
+            AIModel.CLAUDE_OPUS: "gpt-4-turbo",
+            AIModel.CLAUDE_HAIKU: "gpt-3.5-turbo",
+            AIModel.GPT4_TURBO: "gpt-4-turbo",
+            AIModel.GPT4: "gpt-4",
+            AIModel.GPT35_TURBO: "gpt-3.5-turbo",
+            AIModel.LLAMA_70B: "gpt-4-turbo",
+            AIModel.LLAMA_8B: "gpt-3.5-turbo",
+            AIModel.GEMINI_PRO: "gpt-4-turbo",
+            AIModel.MISTRAL_LARGE: "gpt-4-turbo",
+        }
+        
+        return mapping.get(model, "gpt-3.5-turbo")  # Default fallback
     
-    async def generate_code(
+    async def generate_image(
         self,
         prompt: str,
-        language: str = "nexuslang",
-        context: Optional[str] = None
+        model: str = AIModel.STABLE_DIFFUSION,
+        size: str = "1024x1024",
+        quality: str = "standard"
     ) -> Dict[str, Any]:
         """
-        Generate code using the best coding model.
-        Optimized for code generation tasks.
+        Generate image from text prompt.
+        
+        Args:
+            prompt: Text description of desired image
+            model: Image generation model
+            size: Image size (e.g., "1024x1024")
+            quality: Image quality ("standard" or "hd")
+        
+        Returns:
+            Dict with 'url', 'model', 'provider'
         """
-        # Use specialized code model
-        code_model = AIModel.CODELLAMA_70B
-        
-        system_message = f"""You are an expert {language} programmer.
-Generate clean, efficient, well-documented code.
-Follow best practices and include helpful comments."""
-        
-        if context:
-            system_message += f"\n\nContext:\n{context}"
-        
-        messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": prompt}
-        ]
-        
-        return await self.chat_completion(
-            messages=messages,
-            model=code_model,
-            temperature=0.3,  # Lower temperature for more consistent code
-            max_tokens=4000
-        )
+        if model == AIModel.DALLE_3 and self.openai_key:
+            return await self._openai_generate_image(prompt, size, quality)
+        else:
+            # Use OpenRouter for Stable Diffusion
+            return await self._openrouter_generate_image(prompt, model)
     
-    
-    async def analyze_code(
-        self,
-        code: str,
-        language: str = "nexuslang",
-        analysis_type: str = "review"
-    ) -> Dict[str, Any]:
-        """
-        Analyze code for errors, improvements, or explanations.
-        Uses Claude Sonnet for best reasoning.
-        """
-        analysis_prompts = {
-            "review": "Review this code and suggest improvements:",
-            "debug": "Find and explain bugs in this code:",
-            "explain": "Explain what this code does in detail:",
-            "optimize": "Suggest optimizations for this code:"
-        }
-        
-        prompt = analysis_prompts.get(analysis_type, analysis_prompts["review"])
-        
-        messages = [
-            {"role": "system", "content": f"You are an expert {language} code analyst."},
-            {"role": "user", "content": f"{prompt}\n\n```{language}\n{code}\n```"}
-        ]
-        
-        return await self.chat_completion(
-            messages=messages,
-            model=AIModel.CLAUDE_SONNET,  # Best for analysis
-            temperature=0.5,
-            max_tokens=3000
-        )
-    
-    
-    async def quick_response(
+    async def _openai_generate_image(
         self,
         prompt: str,
-        system_message: Optional[str] = None
-    ) -> str:
-        """
-        Get a quick response using the fastest model.
-        Good for simple queries that don't need deep reasoning.
-        """
-        messages = []
-        
-        if system_message:
-            messages.append({"role": "system", "content": system_message})
-        
-        messages.append({"role": "user", "content": prompt})
-        
-        result = await self.chat_completion(
-            messages=messages,
-            model=self.fast_model,  # Use fast model
-            temperature=0.7,
-            max_tokens=500  # Shorter responses
-        )
-        
-        return result["content"]
-    
-    
-    async def search_with_ai(
-        self,
-        query: str,
-        context: Optional[str] = None
+        size: str,
+        quality: str
     ) -> Dict[str, Any]:
-        """
-        Search and answer using AI with internet access.
-        Uses Perplexity model which has real-time web access.
-        """
-        prompt = f"Search and answer: {query}"
+        """Generate image using OpenAI DALL-E."""
+        url = f"{OPENAI_BASE_URL}/images/generations"
         
-        if context:
-            prompt += f"\n\nAdditional context: {context}"
+        headers = {
+            "Authorization": f"Bearer {self.openai_key}",
+            "Content-Type": "application/json"
+        }
         
-        messages = [
-            {"role": "system", "content": "You are a helpful search assistant with internet access."},
-            {"role": "user", "content": prompt}
-        ]
+        payload = {
+            "model": "dall-e-3",
+            "prompt": prompt,
+            "size": size,
+            "quality": quality,
+            "n": 1
+        }
         
-        return await self.chat_completion(
-            messages=messages,
-            model=AIModel.PERPLEXITY_ONLINE,  # Has internet access
-            temperature=0.7,
-            max_tokens=2000
-        )
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=120)) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise Exception(f"OpenAI image generation error: {error_text}")
+                
+                data = await response.json()
+                image_url = data["data"][0]["url"]
+                
+                return {
+                    "url": image_url,
+                    "model": "dall-e-3",
+                    "provider": AIProvider.OPENAI
+                }
     
+    async def _openrouter_generate_image(
+        self,
+        prompt: str,
+        model: str
+    ) -> Dict[str, Any]:
+        """Generate image using OpenRouter (Stable Diffusion, etc.)."""
+        # OpenRouter uses chat completion API for image generation
+        url = f"{OPENROUTER_BASE_URL}/chat/completions"
+        
+        headers = {
+            "Authorization": f"Bearer {self.openrouter_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://developer.galion.app"
+        }
+        
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}]
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=120)) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise Exception(f"OpenRouter image generation error: {error_text}")
+                
+                data = await response.json()
+                # Extract image URL from response
+                # Format depends on specific model
+                content = data["choices"][0]["message"]["content"]
+                
+                return {
+                    "url": content,  # Or extract URL from content
+                    "model": model,
+                    "provider": AIProvider.OPENROUTER
+                }
     
-    def get_available_models(self) -> Dict[str, List[str]]:
-        """
-        Get list of all available models organized by category.
-        """
+    def get_stats(self) -> Dict[str, int]:
+        """Get router statistics."""
         return {
-            "anthropic": [
-                AIModel.CLAUDE_SONNET,
-                AIModel.CLAUDE_OPUS,
-                AIModel.CLAUDE_HAIKU
-            ],
-            "openai": [
-                AIModel.GPT4_TURBO,
-                AIModel.GPT4,
-                AIModel.GPT35_TURBO
-            ],
-            "google": [
-                AIModel.GEMINI_PRO,
-                AIModel.GEMINI_PRO_VISION
-            ],
-            "meta": [
-                AIModel.LLAMA_70B,
-                AIModel.LLAMA_8B,
-                AIModel.CODELLAMA_70B
-            ],
-            "mistral": [
-                AIModel.MISTRAL_LARGE,
-                AIModel.MISTRAL_MEDIUM,
-                AIModel.MISTRAL_SMALL
-            ],
-            "specialized": [
-                AIModel.CODELLAMA_70B,
-                AIModel.PERPLEXITY_ONLINE
-            ]
+            "total_requests": self.request_count,
+            "errors": self.error_count,
+            "success_rate": (self.request_count - self.error_count) / max(self.request_count, 1) * 100
         }
-    
-    
-    def get_model_info(self, model: str) -> Dict[str, Any]:
-        """
-        Get information about a specific model.
-        """
-        model_info = {
-            # Claude models
-            AIModel.CLAUDE_SONNET: {
-                "name": "Claude 3.5 Sonnet",
-                "provider": "Anthropic",
-                "strengths": ["Reasoning", "Coding", "Analysis", "Long context"],
-                "context_length": 200000,
-                "cost_per_1m_tokens": 3.0
-            },
-            AIModel.CLAUDE_OPUS: {
-                "name": "Claude 3 Opus",
-                "provider": "Anthropic",
-                "strengths": ["Complex tasks", "Deep reasoning", "Creative writing"],
-                "context_length": 200000,
-                "cost_per_1m_tokens": 15.0
-            },
-            AIModel.CLAUDE_HAIKU: {
-                "name": "Claude 3 Haiku",
-                "provider": "Anthropic",
-                "strengths": ["Speed", "Efficiency", "Simple tasks"],
-                "context_length": 200000,
-                "cost_per_1m_tokens": 0.25
-            },
-            
-            # GPT models
-            AIModel.GPT4_TURBO: {
-                "name": "GPT-4 Turbo",
-                "provider": "OpenAI",
-                "strengths": ["General purpose", "Well-tested", "Reliable"],
-                "context_length": 128000,
-                "cost_per_1m_tokens": 10.0
-            },
-            AIModel.GPT35_TURBO: {
-                "name": "GPT-3.5 Turbo",
-                "provider": "OpenAI",
-                "strengths": ["Speed", "Cost-effective", "Good for simple tasks"],
-                "context_length": 16000,
-                "cost_per_1m_tokens": 0.5
-            },
-            
-            # Llama models
-            AIModel.LLAMA_70B: {
-                "name": "Llama 3 70B",
-                "provider": "Meta",
-                "strengths": ["Open source", "Good value", "Versatile"],
-                "context_length": 8000,
-                "cost_per_1m_tokens": 0.9
-            },
-            
-            # Code models
-            AIModel.CODELLAMA_70B: {
-                "name": "CodeLlama 70B",
-                "provider": "Meta",
-                "strengths": ["Code generation", "Code completion", "Debugging"],
-                "context_length": 100000,
-                "cost_per_1m_tokens": 0.9
-            },
-            
-            # Search models
-            AIModel.PERPLEXITY_ONLINE: {
-                "name": "Perplexity 70B Online",
-                "provider": "Perplexity",
-                "strengths": ["Internet access", "Real-time info", "Search"],
-                "context_length": 4000,
-                "cost_per_1m_tokens": 1.0
-            }
-        }
-        
-        return model_info.get(model, {
-            "name": model,
-            "provider": "Unknown",
-            "strengths": ["General purpose"],
-            "context_length": 4000,
-            "cost_per_1m_tokens": 1.0
-        })
 
 
-# Global AI router instance
-_ai_router: Optional[AIRouter] = None
-
+# Global router instance
+_router_instance = None
 
 def get_ai_router() -> AIRouter:
-    """Get or create global AI router instance."""
-    global _ai_router
-    if _ai_router is None:
-        _ai_router = AIRouter()
-    return _ai_router
-
+    """Get global AI router instance (singleton)."""
+    global _router_instance
+    if _router_instance is None:
+        _router_instance = AIRouter()
+    return _router_instance

@@ -1,0 +1,35 @@
+// Example 13: Personality Templates
+// Demonstrates using predefined personality templates
+
+// Use a creative writer template
+set_personality_template("creative_writer")
+
+print("=== Creative Writer Personality ===")
+print("Personality Profile:")
+let profile = get_personality_profile()
+print("Dominant traits:", profile["dominant_traits"])
+print("Creative:", get_trait("creative"))
+print("Curiosity:", get_trait("curiosity"))
+print("Empathy:", get_trait("empathetic"))
+print("")
+
+// Switch to analytical researcher
+set_personality_template("analytical_researcher")
+
+print("=== Analytical Researcher Personality ===")
+profile = get_personality_profile()
+print("Dominant traits:", profile["dominant_traits"])
+print("Analytical:", get_trait("analytical"))
+print("Methodical:", get_trait("methodical"))
+print("Transparency:", get_trait("transparency"))
+print("")
+
+// Show all available templates
+print("=== Available Personality Templates ===")
+let templates = get_personality_templates()
+for template_name in templates {
+    print(template_name + ":", templates[template_name])
+}
+
+print("")
+print("✅ Personality templates loaded successfully!")

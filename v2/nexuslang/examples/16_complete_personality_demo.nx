@@ -1,0 +1,199 @@
+// Example 16: Complete Personality Demo
+// Showcases all personality features: templates, mixing, evolution, and analysis
+
+fn main() {
+    print("=== NexusLang v2 Complete Personality Demo ===\n")
+
+    // Part 1: Using Personality Templates
+    print("🎭 Part 1: Personality Templates")
+    print("--------------------------------")
+
+    // Creative Writer Template
+    set_personality_template("creative_writer")
+    let profile = get_personality_profile()
+    print("Creative Writer Template:")
+    print("  Dominant traits:", profile["dominant_traits"])
+    print("  Description:", profile["description"].split("\n")[0])
+    print("")
+
+    // Analytical Researcher Template
+    set_personality_template("analytical_researcher")
+    profile = get_personality_profile()
+    print("Analytical Researcher Template:")
+    print("  Dominant traits:", profile["dominant_traits"])
+    print("  Description:", profile["description"].split("\n")[0])
+    print("")
+
+    // Empathetic Teacher Template
+    set_personality_template("empathetic_teacher")
+    profile = get_personality_profile()
+    print("Empathetic Teacher Template:")
+    print("  Dominant traits:", profile["dominant_traits"])
+    print("  Description:", profile["description"].split("\n")[0])
+    print("")
+
+    // Part 2: Personality Mixing
+    print("🔄 Part 2: Personality Mixing")
+    print("-----------------------------")
+
+    // Mix Creative Writer (70%) with Analytical Researcher (30%)
+    set_personality_template("creative_writer")
+
+    let analytical_traits = {
+        "curiosity": 0.8, "analytical": 0.95, "creative": 0.4, "empathetic": 0.6,
+        "intuition": 0.3, "methodical": 0.9, "verbosity": 0.9, "formality": 0.8,
+        "humor": 0.2, "assertiveness": 0.8, "tactfulness": 0.7, "encouragement": 0.5,
+        "risk_tolerance": 0.2, "confidence_threshold": 0.8, "decisiveness": 0.6,
+        "flexibility": 0.5, "patience": 0.9, "persistence": 0.95, "efficiency": 0.8,
+        "organization": 0.9, "adaptability": 0.6, "openness": 0.7, "reflection": 0.8,
+        "growth_mindset": 0.9, "self_awareness": 0.8, "transparency": 0.95,
+        "ethical_reasoning": 0.9, "environmental_awareness": 0.7
+    }
+
+    mix_global_personality(analytical_traits, (0.7, 0.3))
+
+    print("Mixed Personality (70% Creative, 30% Analytical):")
+    print("  Creative:", get_trait("creative"))
+    print("  Analytical:", get_trait("analytical"))
+    print("  Transparency:", get_trait("transparency"))
+    print("")
+
+    // Part 3: Personality Evolution
+    print("🌱 Part 3: Personality Evolution")
+    print("-------------------------------")
+
+    print("Initial state:")
+    print("  Patience:", get_trait("patience"))
+    print("  Verbosity:", get_trait("verbosity"))
+    print("  Efficiency:", get_trait("efficiency"))
+    print("")
+
+    // Simulate positive feedback (user likes detailed explanations)
+    print("📈 Positive feedback: User appreciates detailed explanations...")
+    evolve_global_personality("verbosity", 1.0, 0.15)     // Increase verbosity
+    evolve_global_personality("patience", 1.0, 0.1)       // Increase patience
+    evolve_global_personality("empathy", 1.0, 0.1)        // Increase empathy
+
+    print("After positive feedback:")
+    print("  Patience:", get_trait("patience"))
+    print("  Verbosity:", get_trait("verbosity"))
+    print("  Efficiency:", get_trait("efficiency"))
+    print("")
+
+    // Simulate negative feedback (user wants quicker responses)
+    print("📉 Negative feedback: User wants faster responses...")
+    evolve_global_personality("verbosity", -1.0, 0.2)     // Decrease verbosity
+    evolve_global_personality("efficiency", 1.0, 0.15)    // Increase efficiency
+    evolve_global_personality("decisiveness", 1.0, 0.1)   // Increase decisiveness
+
+    print("After negative feedback:")
+    print("  Patience:", get_trait("patience"))
+    print("  Verbosity:", get_trait("verbosity"))
+    print("  Efficiency:", get_trait("efficiency"))
+    print("")
+
+    // Part 4: Complete Personality Analysis
+    print("📊 Part 4: Complete Personality Analysis")
+    print("--------------------------------------")
+
+    profile = get_personality_profile()
+    print("Current Personality Profile:")
+    print("")
+
+    print("Trait Categories:")
+    let categories = profile["categories"]
+    for category_name in categories {
+        print("  " + category_name + ":")
+        let category_traits = categories[category_name]
+        for trait_name in category_traits {
+            print("    " + trait_name + ":", category_traits[trait_name])
+        }
+        print("")
+    }
+
+    print("Emotional State:")
+    let emotions = profile["emotional_state"]
+    for emotion_name in emotions {
+        print("  " + emotion_name + ":", emotions[emotion_name])
+    }
+    print("")
+
+    print("Summary:")
+    print("  Dominant traits:", profile["dominant_traits"])
+    print("  Areas for growth:", profile["weak_traits"])
+    print("")
+
+    // Part 5: Practical Application
+    print("🎯 Part 5: Practical Application")
+    print("-------------------------------")
+
+    // Create a task that uses personality
+    solve_problem_with_personality("How should we approach this complex software architecture decision?")
+
+    print("\n✅ Complete personality demo finished!")
+}
+
+// Function demonstrating personality-influenced problem solving
+fn solve_problem_with_personality(problem) {
+    print("Problem:", problem)
+    print("")
+
+    // Get current personality traits
+    let curiosity = get_trait("curiosity")
+    let analytical = get_trait("analytical")
+    let creative = get_trait("creative")
+    let risk_tolerance = get_trait("risk_tolerance")
+    let patience = get_trait("patience")
+    let decisiveness = get_trait("decisiveness")
+
+    print("AI Analysis (influenced by current personality):")
+
+    if curiosity > 0.7 {
+        print("🔍 High curiosity → Exploring unconventional architectural patterns...")
+        print("   - Considering microservices with event-driven architecture")
+        print("   - Investigating serverless computing options")
+    }
+
+    if analytical > 0.7 {
+        print("📊 High analytical → Performing systematic evaluation...")
+        print("   - Analyzing performance requirements")
+        print("   - Evaluating scalability constraints")
+        print("   - Assessing maintainability factors")
+    }
+
+    if creative > 0.7 {
+        print("💡 High creative → Thinking outside traditional patterns...")
+        print("   - Combining multiple architectural styles")
+        print("   - Innovating with domain-driven design principles")
+    }
+
+    if risk_tolerance < 0.4 {
+        print("🛡️ Low risk tolerance → Prioritizing proven, stable solutions...")
+        print("   - Favoring established architectural patterns")
+        print("   - Implementing gradual migration strategies")
+    }
+
+    if patience > 0.7 {
+        print("⏳ High patience → Taking time for thorough analysis...")
+        print("   - Conducting comprehensive research")
+        print("   - Consulting multiple stakeholders")
+    }
+
+    if decisiveness > 0.7 {
+        print("⚡ High decisiveness → Making confident recommendations...")
+        print("   - Providing clear architectural direction")
+        print("   - Setting implementation timelines")
+    }
+
+    print("")
+    print("Final Recommendation: Hybrid microservices architecture with careful migration planning")
+    print("(Decision influenced by personality: " +
+          (curiosity > 0.7 ? "curious, " : "") +
+          (analytical > 0.7 ? "analytical, " : "") +
+          (creative > 0.7 ? "creative, " : "") +
+          (risk_tolerance < 0.4 ? "risk-averse, " : "adventurous, ") +
+          (patience > 0.7 ? "patient, " : "efficient, ") +
+          (decisiveness > 0.7 ? "decisive" : "deliberate"))
+}
+
+main()

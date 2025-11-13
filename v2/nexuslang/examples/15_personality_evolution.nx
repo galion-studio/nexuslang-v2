@@ -1,0 +1,46 @@
+// Example 15: Personality Evolution
+// Demonstrates how personalities can evolve and learn over time
+
+// Start with balanced personality
+set_personality_template("balanced_generalist")
+
+print("=== Initial Balanced Personality ===")
+print("Curiosity:", get_trait("curiosity"))
+print("Patience:", get_trait("patience"))
+print("Confidence Threshold:", get_trait("confidence_threshold"))
+print("")
+
+// Simulate positive feedback - user likes detailed responses
+print("📈 Evolving based on positive feedback...")
+evolve_global_personality("verbosity", 1.0, 0.15)    // Increase verbosity
+evolve_global_personality("patience", 1.0, 0.1)      // Increase patience
+evolve_global_personality("empathy", 1.0, 0.1)       // Increase empathy
+
+print("After positive feedback:")
+print("Curiosity:", get_trait("curiosity"))
+print("Patience:", get_trait("patience"))
+print("Confidence Threshold:", get_trait("confidence_threshold"))
+print("")
+
+// Simulate negative feedback - user wants quicker responses
+print("📉 Evolving based on negative feedback...")
+evolve_global_personality("verbosity", -1.0, 0.2)    // Decrease verbosity
+evolve_global_personality("efficiency", 1.0, 0.15)   // Increase efficiency
+evolve_global_personality("decisiveness", 1.0, 0.1)  // Increase decisiveness
+
+print("After negative feedback:")
+print("Verbosity:", get_trait("verbosity"))
+print("Efficiency:", get_trait("efficiency"))
+print("Decisiveness:", get_trait("decisiveness"))
+print("")
+
+// Show final personality profile
+let profile = get_personality_profile()
+print("=== Final Personality Profile ===")
+print("Dominant traits:", profile["dominant_traits"])
+print("Weak traits:", profile["weak_traits"])
+print("")
+print("Emotional state:", profile["emotional_state"])
+print("")
+
+print("✅ Personality evolution completed!")

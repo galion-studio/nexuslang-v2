@@ -1,0 +1,93 @@
+# Backup Configuration for Project Nexus
+# 3-2-1 Backup Strategy Configuration
+
+database:
+  host: postgres
+  port: 5432
+  name: nexus_v2
+  user: nexus
+  # Password loaded from POSTGRES_PASSWORD environment variable
+
+backup:
+  # Local backup directory
+  local_dir: /var/backups/nexus
+  
+  # Secondary backup location (different disk)
+  secondary_dir: /mnt/backup/nexus
+
+# Retention policy (how many backups to keep)
+retention:
+  hourly: 24    # Keep last 24 hours
+  daily: 7      # Keep last 7 days
+  weekly: 4     # Keep last 4 weeks
+  monthly: 12   # Keep last 12 months
+
+# Offsite backup configuration (Backblaze B2)
+b2:
+  enabled: true
+  bucket: nexus-backups
+  # Credentials loaded from BACKBLAZE_KEY_ID and BACKBLAZE_APPLICATION_KEY
+
+# Notification settings
+notifications:
+  enabled: true
+  on_failure: true
+  on_success: false  # Only notify on problems
+  
+  # Discord webhook (optional)
+  discord:
+    enabled: false
+    webhook_url: ""
+  
+  # Slack webhook (optional)
+  slack:
+    enabled: false
+    webhook_url: ""
+  
+  # Email (optional)
+  email:
+    enabled: false
+    smtp_host: ""
+    smtp_port: 587
+    from_address: ""
+    to_addresses: []
+
+# Verification settings
+verification:
+  enabled: true
+  verify_after_backup: true
+  verify_checksums: true
+
+# Performance settings
+performance:
+  compression_level: 6  # 1-9, higher is more compression but slower
+  parallel_jobs: 2
+  io_nice_level: 5      # 0-7, higher is lower priority
+
+# Backup files and directories (beyond database)
+files:
+  - path: /var/lib/nexus/uploads
+    name: uploads
+    include: "**/*"
+    exclude:
+      - "*.tmp"
+      - "**/.cache/**"
+  
+  - path: /var/lib/nexus/logs
+    name: logs
+    include: "**/*.log"
+    exclude:
+      - "**/*.log.gz"  # Skip already compressed logs
+
+# Docker volumes to backup
+volumes:
+  - postgres-data
+  - redis-data
+  - elasticsearch-data
+
+# Health check
+health_check:
+  enabled: true
+  url: "https://uptime.betterstack.com/api/v1/heartbeat/..."
+  interval: 3600  # Seconds
+

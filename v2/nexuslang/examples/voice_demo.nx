@@ -1,0 +1,88 @@
+// NexusLang v2 - Voice Demo
+// Demonstrates voice-to-voice capabilities
+
+fn main() {
+    print("=== NexusLang v2 Voice Demo ===")
+    print("")
+    
+    // Start voice assistant
+    voice_assistant()
+}
+
+fn voice_assistant() {
+    // Greet user
+    say("Hello! I'm NexusLang, your AI assistant.", emotion="friendly")
+    print("🎤 AI: Hello! I'm NexusLang, your AI assistant.")
+    
+    say("How can I help you today?", emotion="helpful")
+    print("🎤 AI: How can I help you today?")
+    print("")
+    
+    // Listen for input
+    print("👂 Listening for your response...")
+    let user_input = listen(timeout=10)
+    
+    if user_input == "" {
+        print("❌ No input detected")
+        say("I didn't hear anything. Let's try again.", emotion="apologetic")
+        return
+    }
+    
+    print("👤 User:", user_input)
+    print("")
+    
+    // Process and respond
+    process_query(user_input)
+}
+
+fn process_query(query) {
+    print("🤔 Processing query...")
+    
+    // Query knowledge base
+    let facts = knowledge(query)
+    
+    if facts.length > 0 {
+        // Found knowledge
+        let response = "I found " + facts.length + " facts about " + query
+        say(response, emotion="confident")
+        print("🎤 AI:", response)
+        
+        // Share first fact
+        if facts.length > 0 {
+            let fact = facts[0]
+            say(fact.summary, emotion="informative")
+            print("🎤 AI:", fact.summary)
+        }
+    } else {
+        // No knowledge
+        let response = "I don't have information about " + query + " yet."
+        say(response, emotion="apologetic")
+        print("🎤 AI:", response)
+        
+        say("Would you like me to learn about it?", emotion="curious")
+        print("🎤 AI: Would you like me to learn about it?")
+    }
+    
+    print("")
+    say("Anything else I can help with?", emotion="friendly")
+    print("🎤 AI: Anything else I can help with?")
+}
+
+// Placeholder functions (implemented in runtime)
+fn say(text, emotion) {
+    // Runtime implementation
+}
+
+fn listen(timeout) {
+    // Runtime implementation
+    return "example query"  // Placeholder
+}
+
+fn knowledge(query) {
+    // Runtime implementation
+    return []  // Placeholder
+}
+
+// Run
+main()
+

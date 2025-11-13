@@ -1,0 +1,40 @@
+// Example 14: Personality Mixing
+// Demonstrates mixing different personalities together
+
+// Start with a creative writer
+set_personality_template("creative_writer")
+
+print("=== Original Creative Writer ===")
+print("Creative:", get_trait("creative"))
+print("Analytical:", get_trait("analytical"))
+print("Empathetic:", get_trait("empathetic"))
+print("")
+
+// Mix with analytical researcher (50/50)
+let analytical_traits = {
+    "curiosity": 0.8, "analytical": 0.95, "creative": 0.4, "empathetic": 0.6,
+    "intuition": 0.3, "methodical": 0.9, "verbosity": 0.9, "formality": 0.8,
+    "humor": 0.2, "assertiveness": 0.8, "tactfulness": 0.7, "encouragement": 0.5,
+    "risk_tolerance": 0.2, "confidence_threshold": 0.8, "decisiveness": 0.6,
+    "flexibility": 0.5, "patience": 0.9, "persistence": 0.95, "efficiency": 0.8,
+    "organization": 0.9, "adaptability": 0.6, "openness": 0.7, "reflection": 0.8,
+    "growth_mindset": 0.9, "self_awareness": 0.8, "transparency": 0.95,
+    "ethical_reasoning": 0.9, "environmental_awareness": 0.7
+}
+
+mix_global_personality(analytical_traits, (0.7, 0.3))
+
+print("=== Mixed Personality (70% Creative, 30% Analytical) ===")
+print("Creative:", get_trait("creative"))
+print("Analytical:", get_trait("analytical"))
+print("Empathetic:", get_trait("empathetic"))
+print("Transparency:", get_trait("transparency"))
+print("")
+
+// Show personality profile
+let profile = get_personality_profile()
+print("Personality Description:")
+print(profile["description"])
+print("")
+
+print("✅ Personality mixing completed!")

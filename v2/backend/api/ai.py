@@ -1,16 +1,19 @@
 """
 AI API Endpoints
-Provides access to multiple AI models through unified interface.
+REST API for AI generation (chat, code, images, video, TTS, STT).
+
+All endpoints require authentication and consume user credits.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
+from sqlalchemy.orm import Session
 
-from ..core.security import get_current_user
-from ..services.ai import get_ai_router, AIModel, AIRouter
+from ..services.ai.ai_router import get_ai_router, AIModel, AIRouter
+from ..api.auth import get_current_user
+from ..core.database import get_db
 from ..models.user import User
-
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -18,50 +21,64 @@ router = APIRouter(prefix="/ai", tags=["AI"])
 # Request/Response Models
 class ChatMessage(BaseModel):
     """Single chat message."""
-    role: str = Field(..., description="Message role: 'system', 'user', or 'assistant'")
+    role: str = Field(..., description="Role: 'system', 'user', or 'assistant'")
     content: str = Field(..., description="Message content")
 
 
 class ChatRequest(BaseModel):
     """Chat completion request."""
-    messages: List[ChatMessage]
-    model: Optional[str] = Field(None, description="AI model to use (optional)")
-    temperature: float = Field(0.7, ge=0, le=2, description="Response randomness (0-2)")
-    max_tokens: int = Field(2000, ge=1, le=8000, description="Maximum response length")
+    messages: List[ChatMessage] = Field(..., description="Conversation history")
+    model: Optional[str] = Field(AIModel.CLAUDE_SONNET, description="Model to use")
+    temperature: Optional[float] = Field(0.7, ge=0, le=1, description="Sampling temperature")
+    max_tokens: Optional[int] = Field(1000, ge=1, le=4000, description="Max tokens to generate")
 
 
 class ChatResponse(BaseModel):
     """Chat completion response."""
     content: str = Field(..., description="Generated response")
-    model: str = Field(..., description="Model that generated response")
-    provider: str = Field(..., description="AI provider used")
-    usage: Dict[str, Any] = Field(..., description="Token usage statistics")
+    model: str = Field(..., description="Model used")
+    provider: str = Field(..., description="Provider (openrouter/openai)")
+    usage: Dict = Field(..., description="Token usage statistics")
+    credits_used: float = Field(..., description="Credits deducted")
 
 
 class CodeGenerationRequest(BaseModel):
     """Code generation request."""
     prompt: str = Field(..., description="What code to generate")
-    language: str = Field("nexuslang", description="Programming language")
-    context: Optional[str] = Field(None, description="Additional context")
+    language: Optional[str] = Field("python", description="Programming language")
+    model: Optional[str] = Field(AIModel.CLAUDE_SONNET, description="Model to use")
 
 
-class CodeAnalysisRequest(BaseModel):
-    """Code analysis request."""
-    code: str = Field(..., description="Code to analyze")
-    language: str = Field("nexuslang", description="Programming language")
-    analysis_type: str = Field("review", description="Type: review, debug, explain, optimize")
+class ImageGenerationRequest(BaseModel):
+    """Image generation request."""
+    prompt: str = Field(..., min_length=1, max_length=1000, description="Image description")
+    model: Optional[str] = Field(AIModel.STABLE_DIFFUSION, description="Model to use")
+    size: Optional[str] = Field("1024x1024", description="Image size")
+    quality: Optional[str] = Field("standard", description="Quality (standard/hd)")
 
 
-class QuickQueryRequest(BaseModel):
-    """Quick query request."""
-    prompt: str = Field(..., description="Your question or query")
-    system_message: Optional[str] = Field(None, description="System instructions")
+class ImageGenerationResponse(BaseModel):
+    """Image generation response."""
+    url: str = Field(..., description="Generated image URL")
+    model: str = Field(..., description="Model used")
+    provider: str = Field(..., description="Provider")
+    credits_used: float = Field(..., description="Credits deducted")
 
 
-class SearchRequest(BaseModel):
-    """AI-powered search request."""
-    query: str = Field(..., description="Search query")
-    context: Optional[str] = Field(None, description="Additional context")
+# Credit cost calculation
+CREDIT_COSTS = {
+    "chat_per_1k_tokens": 0.01,  # $0.01 per 1k tokens
+    "image_generation": 1.0,     # 1 credit per image
+    "video_generation": 5.0,     # 5 credits per video
+    "tts_per_char": 0.0001,      # $0.0001 per character
+    "stt_per_minute": 0.1        # 0.1 credits per minute
+}
+
+
+def calculate_chat_credits(usage: Dict) -> float:
+    """Calculate credits used for chat completion."""
+    total_tokens = usage.get("total_tokens", 0)
+    return (total_tokens / 1000) * CREDIT_COSTS["chat_per_1k_tokens"]
 
 
 # Endpoints
@@ -70,23 +87,25 @@ class SearchRequest(BaseModel):
 async def chat_completion(
     request: ChatRequest,
     current_user: User = Depends(get_current_user),
-    ai: AIRouter = Depends(get_ai_router)
+    ai: AIRouter = Depends(get_ai_router),
+    db: Session = Depends(get_db)
 ):
     """
-    Generate chat completion using AI.
+    Generate AI chat completion.
     
-    Supports multiple models through OpenRouter:
+    Supports 30+ models via OpenRouter:
     - Claude 3.5 Sonnet (best for reasoning)
     - GPT-4 Turbo (general purpose)
     - Llama 3 70B (open source)
-    - And many more!
+    - Many more!
     
-    Leave model blank to use the default (Claude 3.5 Sonnet).
+    Costs: ~0.01 credits per 1000 tokens
     """
+    # Convert messages to dict format
+    messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+    
     try:
-        # Convert Pydantic models to dicts
-        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
-        
+        # Generate response
         result = await ai.chat_completion(
             messages=messages,
             model=request.model,
@@ -94,13 +113,25 @@ async def chat_completion(
             max_tokens=request.max_tokens
         )
         
-        return ChatResponse(
-            content=result["content"],
-            model=result["model"],
-            provider=result["provider"],
-            usage=result["usage"]
-        )
+        # Calculate credits
+        credits_used = calculate_chat_credits(result["usage"])
+        
+        # Deduct credits
+        if not current_user.deduct_credits(credits_used):
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Insufficient credits. Required: {credits_used:.2f}, Available: {current_user.credits:.2f}"
+            )
+        
+        db.commit()
+        
+        return {
+            **result,
+            "credits_used": credits_used
+        }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -108,30 +139,57 @@ async def chat_completion(
         )
 
 
-@router.post("/code/generate")
+@router.post("/generate/code")
 async def generate_code(
     request: CodeGenerationRequest,
     current_user: User = Depends(get_current_user),
-    ai: AIRouter = Depends(get_ai_router)
+    ai: AIRouter = Depends(get_ai_router),
+    db: Session = Depends(get_db)
 ):
     """
-    Generate code using specialized code model.
+    Generate code using AI.
     
-    Uses CodeLlama 70B - optimized for code generation.
+    Optimized prompts for code generation.
+    Best models: Claude Sonnet, GPT-4, CodeLlama
     """
+    # Build code generation prompt
+    system_message = f"""You are an expert {request.language} programmer.
+Generate clean, well-documented code that follows best practices.
+Include helpful comments explaining the logic."""
+    
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": request.prompt}
+    ]
+    
     try:
-        result = await ai.generate_code(
-            prompt=request.prompt,
-            language=request.language,
-            context=request.context
+        result = await ai.chat_completion(
+            messages=messages,
+            model=request.model,
+            temperature=0.3,  # Lower temperature for code
+            max_tokens=2000
         )
+        
+        credits_used = calculate_chat_credits(result["usage"])
+        
+        if not current_user.deduct_credits(credits_used):
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Insufficient credits"
+            )
+        
+        db.commit()
         
         return {
             "code": result["content"],
             "model": result["model"],
-            "usage": result["usage"]
+            "provider": result["provider"],
+            "language": request.language,
+            "credits_used": credits_used
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -139,147 +197,137 @@ async def generate_code(
         )
 
 
-@router.post("/code/analyze")
-async def analyze_code(
-    request: CodeAnalysisRequest,
+@router.post("/generate/image", response_model=ImageGenerationResponse)
+async def generate_image(
+    request: ImageGenerationRequest,
     current_user: User = Depends(get_current_user),
-    ai: AIRouter = Depends(get_ai_router)
+    ai: AIRouter = Depends(get_ai_router),
+    db: Session = Depends(get_db)
 ):
     """
-    Analyze code for errors, improvements, or explanations.
+    Generate image from text prompt.
     
-    Analysis types:
-    - review: Code review with suggestions
-    - debug: Find and explain bugs
-    - explain: Explain what code does
-    - optimize: Suggest performance improvements
+    Models:
+    - DALL-E 3 (OpenAI) - High quality, photorealistic
+    - Stable Diffusion XL - Fast, artistic
     
-    Uses Claude 3.5 Sonnet for best reasoning.
+    Cost: 1 credit per image
     """
-    try:
-        result = await ai.analyze_code(
-            code=request.code,
-            language=request.language,
-            analysis_type=request.analysis_type
-        )
-        
-        return {
-            "analysis": result["content"],
-            "model": result["model"],
-            "usage": result["usage"]
-        }
+    credits_required = CREDIT_COSTS["image_generation"]
     
-    except Exception as e:
+    # Check credits before generating
+    if not current_user.has_credits(credits_required):
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Code analysis failed: {str(e)}"
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Insufficient credits. Required: {credits_required}, Available: {current_user.credits}"
         )
-
-
-@router.post("/quick")
-async def quick_query(
-    request: QuickQueryRequest,
-    current_user: User = Depends(get_current_user),
-    ai: AIRouter = Depends(get_ai_router)
-):
-    """
-    Get quick answer using fastest model.
     
-    Good for simple questions that don't need deep reasoning.
-    Uses GPT-3.5 Turbo for speed and cost efficiency.
-    """
     try:
-        response = await ai.quick_response(
+        result = await ai.generate_image(
             prompt=request.prompt,
-            system_message=request.system_message
+            model=request.model,
+            size=request.size,
+            quality=request.quality
         )
         
-        return {"response": response}
-    
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Query failed: {str(e)}"
-        )
-
-
-@router.post("/search")
-async def ai_search(
-    request: SearchRequest,
-    current_user: User = Depends(get_current_user),
-    ai: AIRouter = Depends(get_ai_router)
-):
-    """
-    Search and answer using AI with internet access.
-    
-    Uses Perplexity model which has real-time web access.
-    Perfect for questions that need current information.
-    """
-    try:
-        result = await ai.search_with_ai(
-            query=request.query,
-            context=request.context
-        )
+        # Deduct credits
+        current_user.deduct_credits(credits_required)
+        db.commit()
         
         return {
-            "answer": result["content"],
-            "model": result["model"],
-            "usage": result["usage"]
+            **result,
+            "credits_used": credits_required
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}"
+            detail=f"Image generation failed: {str(e)}"
         )
 
 
 @router.get("/models")
-async def get_available_models(
+async def list_models(current_user: User = Depends(get_current_user)):
+    """
+    List available AI models with descriptions and pricing.
+    
+    Returns information about all supported models.
+    """
+    models = [
+        {
+            "id": AIModel.CLAUDE_SONNET,
+            "name": "Claude 3.5 Sonnet",
+            "provider": "Anthropic",
+            "type": "chat",
+            "description": "Best for reasoning, analysis, and complex tasks",
+            "cost_per_1k_tokens": 0.015,
+            "context_window": 200000
+        },
+        {
+            "id": AIModel.GPT4_TURBO,
+            "name": "GPT-4 Turbo",
+            "provider": "OpenAI",
+            "type": "chat",
+            "description": "Powerful general-purpose model",
+            "cost_per_1k_tokens": 0.01,
+            "context_window": 128000
+        },
+        {
+            "id": AIModel.GPT35_TURBO,
+            "name": "GPT-3.5 Turbo",
+            "provider": "OpenAI",
+            "type": "chat",
+            "description": "Fast and cost-effective",
+            "cost_per_1k_tokens": 0.002,
+            "context_window": 16000
+        },
+        {
+            "id": AIModel.LLAMA_70B,
+            "name": "Llama 3 70B",
+            "provider": "Meta",
+            "type": "chat",
+            "description": "Open source, powerful",
+            "cost_per_1k_tokens": 0.008,
+            "context_window": 8000
+        },
+        {
+            "id": AIModel.STABLE_DIFFUSION,
+            "name": "Stable Diffusion XL",
+            "provider": "Stability AI",
+            "type": "image",
+            "description": "High-quality image generation",
+            "cost_per_image": 1.0
+        },
+        {
+            "id": AIModel.DALLE_3,
+            "name": "DALL-E 3",
+            "provider": "OpenAI",
+            "type": "image",
+            "description": "Photorealistic images",
+            "cost_per_image": 1.0
+        }
+    ]
+    
+    return {"models": models}
+
+
+@router.get("/stats")
+async def get_ai_stats(
     current_user: User = Depends(get_current_user),
     ai: AIRouter = Depends(get_ai_router)
 ):
     """
-    Get list of all available AI models organized by category.
+    Get AI usage statistics.
     
-    Returns models from:
-    - Anthropic (Claude)
-    - OpenAI (GPT)
-    - Google (Gemini)
-    - Meta (Llama)
-    - Mistral
-    - And more!
+    Returns stats about AI requests, success rate, etc.
     """
+    router_stats = ai.get_stats()
+    
     return {
-        "available_models": ai.get_available_models(),
-        "default_model": ai.default_model,
-        "fallback_model": ai.fallback_model,
-        "fast_model": ai.fast_model
+        "user_credits": current_user.credits,
+        "user_credits_used": current_user.credits_used,
+        "subscription_tier": current_user.subscription_tier,
+        "router_stats": router_stats
     }
-
-
-@router.get("/models/{model}")
-async def get_model_info(
-    model: str,
-    current_user: User = Depends(get_current_user),
-    ai: AIRouter = Depends(get_ai_router)
-):
-    """
-    Get detailed information about a specific AI model.
-    
-    Includes:
-    - Model name and provider
-    - Strengths and use cases
-    - Context length
-    - Pricing information
-    """
-    info = ai.get_model_info(model)
-    
-    if not info:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Model '{model}' not found"
-        )
-    
-    return info
-

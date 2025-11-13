@@ -1,18 +1,9 @@
 """
-Database models for NexusLang v2 Platform.
+Database Models Package
+All SQLAlchemy models for NexusLang v2.
 """
 
-from .user import User, Session, APIKey
-from .billing import Subscription, Credit, Transaction
-from .project import Project, File, Collaborator
-from .knowledge import KnowledgeEntry, KnowledgeGraph, Contribution
-from .community import Post, Comment, Team, TeamMember, Star
+from .user import User, Base
+from .project import Project
 
-__all__ = [
-    'User', 'Session', 'APIKey',
-    'Subscription', 'Credit', 'Transaction',
-    'Project', 'File', 'Collaborator',
-    'KnowledgeEntry', 'KnowledgeGraph', 'Contribution',
-    'Post', 'Comment', 'Team', 'TeamMember', 'Star'
-]
-
+__all__ = ["User", "Project", "Base"]

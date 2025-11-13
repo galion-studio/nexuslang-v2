@@ -1,72 +1,66 @@
 """
-Project and file models for IDE.
+Project Model
+User projects for code storage and management.
 """
 
-from sqlalchemy import Column, String, Text, Integer, DateTime, Enum as SQLEnum, LargeBinary
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, BINARY
+from sqlalchemy.orm import relationship
 from datetime import datetime
-import enum
-
-from ..core.database import Base
-
-
-class VisibilityType(str, enum.Enum):
-    """Project visibility options."""
-    PRIVATE = "private"
-    PUBLIC = "public"
-    UNLISTED = "unlisted"
-
-
-class RoleType(str, enum.Enum):
-    """Collaboration role types."""
-    OWNER = "owner"
-    ADMIN = "admin"
-    EDITOR = "editor"
-    VIEWER = "viewer"
+from .user import Base
 
 
 class Project(Base):
-    """Project model."""
+    """
+    Project model for storing user code projects.
+    
+    Supports NexusLang and other languages.
+    """
     
     __tablename__ = "projects"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # Primary key
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    
+    # Project info
     name = Column(String(255), nullable=False)
-    description = Column(Text)
-    visibility = Column(SQLEnum(VisibilityType), nullable=False, default=VisibilityType.PRIVATE)
-    stars_count = Column(Integer, default=0)
-    forks_count = Column(Integer, default=0)
-    forked_from = Column(UUID(as_uuid=True), index=True)  # For tracking forks
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-class File(Base):
-    """File model."""
+    description = Column(Text, nullable=True)
+    language = Column(String(50), default="nexuslang", nullable=False)
     
-    __tablename__ = "files"
+    # Code
+    code = Column(Text, nullable=True)
+    compiled_binary = Column(BINARY, nullable=True)
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    path = Column(Text, nullable=False)
-    content = Column(Text)
-    binary_content = Column(LargeBinary)  # For .nxb files
-    version = Column(Integer, default=1)
-    size_bytes = Column(Integer)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-class Collaborator(Base):
-    """Project collaborator model."""
+    # Status
+    status = Column(String(50), default="draft", nullable=False)  # draft, active, archived
+    visibility = Column(String(50), default="private", nullable=False)  # private, public, unlisted
     
-    __tablename__ = "collaborators"
+    # Stats
+    execution_count = Column(Integer, default=0)
+    last_executed = Column(DateTime, nullable=True)
     
-    project_id = Column(UUID(as_uuid=True), primary_key=True)
-    user_id = Column(UUID(as_uuid=True), primary_key=True)
-    role = Column(SQLEnum(RoleType), nullable=False, default=RoleType.VIEWER)
-    invited_at = Column(DateTime, default=datetime.utcnow)
-    accepted_at = Column(DateTime)
-
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    # user = relationship("User", back_populates="projects")
+    
+    def __repr__(self):
+        return f"<Project(id={self.id}, name='{self.name}', user_id={self.user_id})>"
+    
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "description": self.description,
+            "language": self.language,
+            "status": self.status,
+            "visibility": self.visibility,
+            "execution_count": self.execution_count,
+            "last_executed": self.last_executed.isoformat() if self.last_executed else None,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat()
+        }

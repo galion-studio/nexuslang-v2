@@ -1,452 +1,331 @@
 """
-Billing API routes.
-Handles subscriptions, credits, and Shopify integration.
+Billing API Endpoints
+Subscription management, credit purchases, and transaction history.
+
+Endpoints:
+- GET /subscriptions - List available subscription tiers
+- POST /subscribe - Subscribe to a tier
+- POST /cancel - Cancel subscription
+- GET /credits - Get credit balance
+- POST /credits/purchase - Purchase credits
+- GET /transactions - Get transaction history
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import Optional, List
-from datetime import datetime
-import uuid
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
 
+from ..api.auth import get_current_user
 from ..core.database import get_db
 from ..models.user import User
-from ..models.billing import Subscription, Credit, Transaction, SubscriptionTier, TransactionType, TransactionStatus
-from ..api.auth import get_current_user
 
-router = APIRouter()
+router = APIRouter(prefix="/billing", tags=["Billing"])
 
 
 # Request/Response Models
+class SubscriptionTier(BaseModel):
+    """Subscription tier information."""
+    id: str
+    name: str
+    price: float
+    interval: str  # monthly, yearly
+    credits_per_month: int
+    features: List[str]
+    limits: dict
+
+
 class SubscribeRequest(BaseModel):
-    tier: str  # 'free', 'pro', 'enterprise'
+    """Subscription request."""
+    tier_id: str = Field(..., description="Subscription tier ID")
+    payment_method: Optional[str] = Field(None, description="Payment method ID")
 
 
-class PurchaseCreditsRequest(BaseModel):
-    package: str  # 'starter', 'pro', 'business', 'enterprise'
+class CreditPurchaseRequest(BaseModel):
+    """Credit purchase request."""
+    amount: int = Field(..., ge=100, description="Number of credits to purchase")
+    payment_method: Optional[str] = Field(None, description="Payment method ID")
 
 
-class SubscriptionResponse(BaseModel):
-    id: str
-    tier: str
-    status: str
-    credits_included: int
-    credits_remaining: int
-    price_monthly: float
-    starts_at: datetime
-    ends_at: Optional[datetime]
+# Subscription tiers (from PROJECT_STATE_COMPLETE.md)
+SUBSCRIPTION_TIERS = {
+    "free": {
+        "id": "free",
+        "name": "Free",
+        "price": 0,
+        "interval": "monthly",
+        "credits_per_month": 100,
+        "features": [
+            "100 free credits",
+            "Basic AI models",
+            "Community support",
+            "3 projects max"
+        ],
+        "limits": {
+            "max_projects": 3,
+            "api_calls_per_day": 100,
+            "storage_gb": 1
+        }
+    },
+    "creator": {
+        "id": "creator",
+        "name": "Creator",
+        "price": 20,
+        "interval": "monthly",
+        "credits_per_month": 1000,
+        "features": [
+            "1,000 credits/month",
+            "All AI models",
+            "Priority support",
+            "10 projects",
+            "Commercial license"
+        ],
+        "limits": {
+            "max_projects": 10,
+            "api_calls_per_day": 1000,
+            "storage_gb": 10
+        }
+    },
+    "professional": {
+        "id": "professional",
+        "name": "Professional",
+        "price": 50,
+        "interval": "monthly",
+        "credits_per_month": 5000,
+        "features": [
+            "5,000 credits/month",
+            "All AI models",
+            "Priority support",
+            "50 projects",
+            "Team features (5 members)",
+            "Advanced analytics"
+        ],
+        "limits": {
+            "max_projects": 50,
+            "api_calls_per_day": 10000,
+            "storage_gb": 100,
+            "team_members": 5
+        }
+    },
+    "business": {
+        "id": "business",
+        "name": "Business",
+        "price": 200,
+        "interval": "monthly",
+        "credits_per_month": 25000,
+        "features": [
+            "25,000 credits/month",
+            "All AI models",
+            "Dedicated support",
+            "200 projects",
+            "Team features (20 members)",
+            "White-label options",
+            "Custom integrations"
+        ],
+        "limits": {
+            "max_projects": 200,
+            "api_calls_per_day": 100000,
+            "storage_gb": 500,
+            "team_members": 20
+        }
+    },
+    "enterprise": {
+        "id": "enterprise",
+        "name": "Enterprise",
+        "price": 2500,
+        "interval": "monthly",
+        "credits_per_month": -1,  # Unlimited
+        "features": [
+            "Unlimited credits",
+            "All AI models",
+            "24/7 dedicated support",
+            "Unlimited projects",
+            "Unlimited team members",
+            "White-label",
+            "Custom SLA",
+            "On-premise deployment"
+        ],
+        "limits": {
+            "max_projects": -1,
+            "api_calls_per_day": -1,
+            "storage_gb": -1,
+            "team_members": -1
+        }
+    }
+}
+
+
+# Endpoints
+
+@router.get("/subscriptions", response_model=List[SubscriptionTier])
+async def list_subscriptions():
+    """
+    List all available subscription tiers.
     
-    class Config:
-        from_attributes = True
+    Returns pricing and features for each tier.
+    """
+    return list(SUBSCRIPTION_TIERS.values())
 
 
-class CreditBalanceResponse(BaseModel):
-    balance: int
-    used_this_month: int
-    included_credits: int
-    purchased_credits: int
-
-
-class TransactionResponse(BaseModel):
-    id: str
-    type: str
-    amount: float
-    credits: int
-    status: str
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-
-# Subscription Endpoints
-@router.get("/subscription", response_model=SubscriptionResponse)
-async def get_subscription(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+@router.get("/subscription")
+async def get_current_subscription(
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Get user's current subscription information.
+    Get current user's subscription details.
+    
+    Returns active subscription information.
     """
-    result = await db.execute(
-        select(Subscription).where(
-            Subscription.user_id == current_user.id
-        ).order_by(Subscription.created_at.desc())
-    )
-    subscription = result.scalar_one_or_none()
+    tier_info = SUBSCRIPTION_TIERS.get(current_user.subscription_tier, SUBSCRIPTION_TIERS["free"])
     
-    if not subscription:
-        # Create default free subscription
-        subscription = Subscription(
-            user_id=current_user.id,
-            tier=SubscriptionTier.FREE,
-            status="active",
-            credits_included=100,
-            credits_remaining=100,
-            price_monthly=0.0
-        )
-        db.add(subscription)
-        await db.commit()
-        await db.refresh(subscription)
-    
-    return SubscriptionResponse(
-        id=str(subscription.id),
-        tier=subscription.tier.value,
-        status=subscription.status,
-        credits_included=subscription.credits_included,
-        credits_remaining=subscription.credits_remaining,
-        price_monthly=subscription.price_monthly,
-        starts_at=subscription.starts_at,
-        ends_at=subscription.ends_at
-    )
+    return {
+        "tier": tier_info,
+        "status": current_user.subscription_status,
+        "start_date": current_user.subscription_start.isoformat() if current_user.subscription_start else None,
+        "end_date": current_user.subscription_end.isoformat() if current_user.subscription_end else None,
+        "is_active": current_user.is_subscription_active()
+    }
 
 
 @router.post("/subscribe")
 async def subscribe(
     request: SubscribeRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     """
-    Subscribe to a paid tier.
-    Returns Shopify checkout URL.
+    Subscribe to a tier.
+    
+    Note: Payment processing not yet implemented.
+    This endpoint updates subscription tier for testing.
     """
     # Validate tier
-    tier_config = {
-        "free": {"credits": 100, "price": 0},
-        "pro": {"credits": 10000, "price": 19},
-        "enterprise": {"credits": -1, "price": 199}  # -1 = unlimited
-    }
-    
-    if request.tier not in tier_config:
+    if request.tier_id not in SUBSCRIPTION_TIERS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid tier. Choose from: {list(tier_config.keys())}"
+            detail=f"Invalid tier: {request.tier_id}"
         )
     
-    config = tier_config[request.tier]
+    tier = SUBSCRIPTION_TIERS[request.tier_id]
     
-    # For MVP: Create subscription directly without Shopify
-    # In production: Generate Shopify checkout URL
+    # TODO: Implement Shopify/Stripe payment processing
     
-    # Check if user already has active subscription
-    result = await db.execute(
-        select(Subscription).where(
-            Subscription.user_id == current_user.id,
-            Subscription.status == "active"
-        )
-    )
-    existing = result.scalar_one_or_none()
+    # Update user subscription
+    current_user.subscription_tier = request.tier_id
+    current_user.subscription_status = "active"
+    current_user.subscription_start = datetime.utcnow()
+    current_user.subscription_end = datetime.utcnow() + timedelta(days=30)
     
-    if existing and existing.tier != SubscriptionTier.FREE:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You already have an active subscription. Cancel it first."
-        )
+    # Add credits for new tier
+    current_user.add_credits(tier["credits_per_month"])
     
-    # Create new subscription
-    try:
-        tier_enum = SubscriptionTier(request.tier)
-    except ValueError:
-        tier_enum = SubscriptionTier.FREE
-    
-    subscription = Subscription(
-        user_id=current_user.id,
-        tier=tier_enum,
-        status="active",
-        credits_included=config["credits"],
-        credits_remaining=config["credits"],
-        price_monthly=config["price"]
-    )
-    
-    # Cancel existing free tier
-    if existing:
-        existing.status = "cancelled"
-        existing.ends_at = datetime.utcnow()
-    
-    db.add(subscription)
-    await db.commit()
-    await db.refresh(subscription)
-    
-    # Create transaction record
-    transaction = Transaction(
-        user_id=current_user.id,
-        type=TransactionType.SUBSCRIPTION,
-        amount=config["price"],
-        credits=config["credits"],
-        status=TransactionStatus.COMPLETED,
-        metadata={"tier": request.tier}
-    )
-    db.add(transaction)
-    await db.commit()
+    db.commit()
     
     return {
-        "subscription_id": str(subscription.id),
-        "tier": request.tier,
-        "status": "active",
-        "message": f"Successfully subscribed to {request.tier} tier!"
+        "success": True,
+        "message": f"Subscribed to {tier['name']} plan",
+        "tier": tier,
+        "credits_added": tier["credits_per_month"]
     }
 
 
 @router.post("/cancel")
 async def cancel_subscription(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     """
     Cancel current subscription.
+    
     Subscription remains active until end of billing period.
     """
-    result = await db.execute(
-        select(Subscription).where(
-            Subscription.user_id == current_user.id,
-            Subscription.status == "active"
-        )
-    )
-    subscription = result.scalar_one_or_none()
-    
-    if not subscription:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No active subscription found"
-        )
-    
-    if subscription.tier == SubscriptionTier.FREE:
+    if current_user.subscription_tier == "free":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot cancel free tier"
+            detail="Free tier cannot be canceled"
         )
     
-    # Mark as cancelled
-    subscription.status = "cancelled"
-    # Set end date (in real app, this would be end of billing period)
-    subscription.ends_at = datetime.utcnow()
-    
-    await db.commit()
+    current_user.subscription_status = "canceled"
+    db.commit()
     
     return {
-        "message": "Subscription cancelled successfully",
-        "tier": subscription.tier.value,
-        "ends_at": subscription.ends_at
+        "success": True,
+        "message": "Subscription canceled. Access remains until end of billing period.",
+        "end_date": current_user.subscription_end.isoformat() if current_user.subscription_end else None
     }
 
 
-# Credit Endpoints
-@router.get("/credits", response_model=CreditBalanceResponse)
-async def get_credits(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+@router.get("/credits")
+async def get_credits(current_user: User = Depends(get_current_user)):
     """
-    Get user's credit balance.
+    Get current credit balance and usage statistics.
+    
+    Returns credits available, used, and monthly allocation.
     """
-    # Get subscription
-    sub_result = await db.execute(
-        select(Subscription).where(
-            Subscription.user_id == current_user.id,
-            Subscription.status == "active"
-        )
-    )
-    subscription = sub_result.scalar_one_or_none()
+    tier_info = SUBSCRIPTION_TIERS.get(current_user.subscription_tier, SUBSCRIPTION_TIERS["free"])
     
-    # Get purchased credits
-    credit_result = await db.execute(
-        select(Credit).where(Credit.user_id == current_user.id)
-    )
-    credits = credit_result.scalars().all()
-    
-    total_purchased = sum(c.amount for c in credits if c.amount > 0)
-    total_used = sum(abs(c.amount) for c in credits if c.amount < 0)
-    
-    included_credits = subscription.credits_remaining if subscription else 0
-    
-    return CreditBalanceResponse(
-        balance=included_credits + total_purchased,
-        used_this_month=total_used,
-        included_credits=included_credits,
-        purchased_credits=total_purchased
-    )
+    return {
+        "credits_available": current_user.credits,
+        "credits_used_total": current_user.credits_used,
+        "monthly_allocation": tier_info["credits_per_month"],
+        "subscription_tier": current_user.subscription_tier
+    }
 
 
 @router.post("/credits/purchase")
 async def purchase_credits(
-    request: PurchaseCreditsRequest,
+    request: CreditPurchaseRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     """
-    Purchase credit packages.
-    Returns Shopify checkout URL.
+    Purchase additional credits.
+    
+    Credit packages:
+    - 100 credits = $10
+    - 500 credits = $45 (10% discount)
+    - 1000 credits = $80 (20% discount)
+    
+    Note: Payment processing not yet implemented.
     """
-    packages = {
-        "starter": {"credits": 1000, "price": 10, "bonus": 0},
-        "pro": {"credits": 5000, "price": 45, "bonus": 500},
-        "business": {"credits": 15000, "price": 120, "bonus": 2000},
-        "enterprise": {"credits": 50000, "price": 350, "bonus": 10000}
-    }
+    # Calculate cost (simplified pricing)
+    cost_per_credit = 0.10  # $0.10 per credit
+    if request.amount >= 1000:
+        cost_per_credit = 0.08  # 20% discount
+    elif request.amount >= 500:
+        cost_per_credit = 0.09  # 10% discount
     
-    if request.package not in packages:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid package. Choose from: {list(packages.keys())}"
-        )
+    total_cost = request.amount * cost_per_credit
     
-    config = packages[request.package]
-    total_credits = config["credits"] + config["bonus"]
+    # TODO: Implement actual payment processing
     
-    # Create credit record
-    credit = Credit(
-        user_id=current_user.id,
-        amount=total_credits,
-        source="purchase",
-        description=f"Purchased {request.package} package"
-    )
-    
-    db.add(credit)
-    
-    # Create transaction
-    transaction = Transaction(
-        user_id=current_user.id,
-        type=TransactionType.CREDIT_PURCHASE,
-        amount=config["price"],
-        credits=total_credits,
-        status=TransactionStatus.COMPLETED,
-        metadata={"package": request.package}
-    )
-    
-    db.add(transaction)
-    await db.commit()
-    await db.refresh(credit)
+    # Add credits
+    current_user.add_credits(request.amount)
+    db.commit()
     
     return {
-        "transaction_id": str(transaction.id),
-        "credits_purchased": total_credits,
-        "amount": config["price"],
-        "package": request.package,
-        "message": f"Successfully purchased {total_credits} credits!"
+        "success": True,
+        "credits_purchased": request.amount,
+        "cost": total_cost,
+        "new_balance": current_user.credits
     }
 
 
-@router.post("/credits/deduct")
-async def deduct_credits(
-    amount: int,
-    description: str = "API usage",
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Deduct credits from user's balance (internal use).
-    """
-    if amount <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Amount must be positive"
-        )
-    
-    # Check balance
-    balance_response = await get_credits(current_user, db)
-    
-    if balance_response.balance < amount:
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail=f"Insufficient credits. Balance: {balance_response.balance}, Required: {amount}"
-        )
-    
-    # Deduct from subscription credits first
-    sub_result = await db.execute(
-        select(Subscription).where(
-            Subscription.user_id == current_user.id,
-            Subscription.status == "active"
-        )
-    )
-    subscription = sub_result.scalar_one_or_none()
-    
-    if subscription and subscription.credits_remaining > 0:
-        deduct_from_sub = min(amount, subscription.credits_remaining)
-        subscription.credits_remaining -= deduct_from_sub
-        amount -= deduct_from_sub
-    
-    # Deduct remaining from purchased credits
-    if amount > 0:
-        credit = Credit(
-            user_id=current_user.id,
-            amount=-amount,
-            source="usage",
-            description=description
-        )
-        db.add(credit)
-    
-    await db.commit()
-    
-    return {
-        "message": "Credits deducted successfully",
-        "remaining_balance": balance_response.balance - amount
-    }
-
-
-# Transaction History
-@router.get("/transactions", response_model=List[TransactionResponse])
+@router.get("/transactions")
 async def get_transactions(
-    limit: int = 50,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    limit: int = 50
 ):
     """
-    Get user's transaction history.
-    """
-    result = await db.execute(
-        select(Transaction)
-        .where(Transaction.user_id == current_user.id)
-        .order_by(Transaction.created_at.desc())
-        .limit(limit)
-    )
-    transactions = result.scalars().all()
+    Get transaction history.
     
-    return [
-        TransactionResponse(
-            id=str(t.id),
-            type=t.type.value,
-            amount=t.amount,
-            credits=t.credits,
-            status=t.status.value,
-            created_at=t.created_at
-        )
-        for t in transactions
-    ]
-
-
-# Usage Stats
-@router.get("/usage")
-async def get_usage_stats(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+    Returns recent billing transactions.
+    Note: Full implementation requires transaction tracking model.
     """
-    Get usage statistics for current billing period.
-    """
-    # Get all credit usage this month
-    credit_result = await db.execute(
-        select(Credit).where(
-            Credit.user_id == current_user.id,
-            Credit.amount < 0,
-            Credit.created_at >= datetime.utcnow().replace(day=1)
-        )
-    )
-    usage_credits = credit_result.scalars().all()
-    
-    total_used = sum(abs(c.amount) for c in usage_credits)
-    
-    # Breakdown by source
-    by_source = {}
-    for credit in usage_credits:
-        source = credit.description or "other"
-        by_source[source] = by_source.get(source, 0) + abs(credit.amount)
+    # TODO: Implement transaction history from database
     
     return {
-        "total_used": total_used,
-        "breakdown": by_source,
-        "period": "current_month"
+        "transactions": [],
+        "message": "Transaction history coming soon"
     }
-

@@ -15,8 +15,8 @@ from .base_integration import BaseIntegration, IntegrationResult
 from .github_integration import GitHubIntegration
 from .slack_integration import SlackIntegration
 from .webhook_integration import WebhookIntegration
-from .n8n_integration import N8NIntegration
-from .zapier_integration import ZapierIntegration
+from .n8n_integration import N8nIntegrationService
+from .zapier_integration import ZapierIntegrationService
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +48,8 @@ class IntegrationManager:
             'github': GitHubIntegration,
             'slack': SlackIntegration,
             'webhook': WebhookIntegration,
-            'n8n': N8NIntegration,
-            'zapier': ZapierIntegration,
+            'n8n': N8nIntegrationService,
+            'zapier': ZapierIntegrationService,
         }
 
     async def initialize(self) -> bool:

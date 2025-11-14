@@ -10,8 +10,8 @@ from .integration_manager import IntegrationManager
 from .github_integration import GitHubIntegration
 from .slack_integration import SlackIntegration
 from .webhook_integration import WebhookIntegration
-from .n8n_integration import N8NIntegration
-from .zapier_integration import ZapierIntegration
+from .n8n_integration import N8nIntegrationService
+from .zapier_integration import ZapierIntegrationService
 
 __all__ = [
     'BaseIntegration',
@@ -20,6 +20,6 @@ __all__ = [
     'GitHubIntegration',
     'SlackIntegration',
     'WebhookIntegration',
-    'N8NIntegration',
-    'ZapierIntegration'
+    'N8nIntegrationService',
+    'ZapierIntegrationService'
 ]

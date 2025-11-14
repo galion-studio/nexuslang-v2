@@ -94,7 +94,7 @@ if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
     log_warning "Port $PORT is already in use. Attempting to kill existing process..."
     pkill -f "uvicorn.*$PORT" || true
     sleep 2
-    
+
     if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
         log_error "Could not free port $PORT. Please check manually:"
         lsof -i :$PORT
@@ -209,4 +209,3 @@ echo $SERVER_PID > "$LOG_DIR/server.pid"
 
 log_success "Server is ready! 🚀"
 log_info "Logs are being written to: $LOG_DIR/galion-backend.log"
-

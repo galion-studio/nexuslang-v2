@@ -176,6 +176,10 @@ fi
 log_info "Testing main.py import..."
 cd "$BACKEND_DIR"
 IMPORT_TEST=$(python -c "from main import app; print('OK')" 2>&1)
+
+# Additional debug info
+log_info "Checking main.py imports..."
+python -c "import ast; content = open('main.py').read(); lines = content.split('\n'); print(f'Line 21-22: {lines[20:22]}')" 2>/dev/null || echo "Could not check main.py content"
 if echo "$IMPORT_TEST" | grep -q "OK"; then
     log_success "main.py imports successful"
 else

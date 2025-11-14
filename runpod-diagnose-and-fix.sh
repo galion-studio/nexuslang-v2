@@ -203,8 +203,7 @@ fi
 # ============================================================================
 log_section "STEP 6: Starting Web Server"
 
-# Change to backend directory and set up environment for relative imports
-cd "$BACKEND_DIR"
+# Set PYTHONPATH for absolute imports (main.py now uses absolute imports)
 export PYTHONPATH="$PROJECT_DIR:$PROJECT_DIR/v2:$BACKEND_DIR"
 
 log_info "Server configuration:"
@@ -215,8 +214,9 @@ log_info "  - Backend Dir: $BACKEND_DIR"
 log_info "  - Log File: $LOG_DIR/galion-backend.log"
 log_info "  - PYTHONPATH: $PYTHONPATH"
 
-# Start server with relative imports working
+# Start server from backend directory with absolute imports
 log_info "Starting server in background..."
+cd "$BACKEND_DIR"
 nohup python -m uvicorn main:app \
     --host 0.0.0.0 \
     --port $PORT \

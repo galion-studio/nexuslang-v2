@@ -1,0 +1,150 @@
+# NexusLang v2 License Agreement
+
+## Version 1.0 - November 2025
+
+## Preamble
+
+NexusLang v2 is an innovative AI-native programming language developed by Galion Studio. This license is designed to democratize AI development while protecting the commercial interests of the original creators and ensuring responsible use of advanced AI capabilities.
+
+## 1. Definitions
+
+- **"Software"** refers to NexusLang v2, its compiler, runtime, libraries, documentation, and all associated materials.
+- **"Hobby Use"** means personal, educational, or non-commercial use with no revenue generation.
+- **"Commercial Use"** means any use that generates revenue, provides services for payment, or is part of a commercial product.
+- **"Developer Platform Member"** means any individual or entity registered on the official developer.galion.app platform.
+- **"Heavy Modification"** means significant changes that alter the fundamental nature and functionality of the Software (more than 50% of the codebase).
+
+## 2. Grant of License
+
+### 2.1 Free Access
+Subject to the terms of this license, you are granted a worldwide, royalty-free, non-exclusive license to:
+
+- Use the Software for Hobby Use without any restrictions
+- Modify the Software for your own Hobby Use
+- Distribute Heavy Modifications of the Software for Hobby Use
+- Access and use all libraries, APIs, and documentation
+
+### 2.2 Commercial Use Restrictions
+Commercial Use of the original Software (without Heavy Modification) requires explicit written permission from Galion Studio.
+
+**To obtain commercial use permission:**
+1. Send a notification to: licensing@galion.app
+2. Include: your name, company (if applicable), intended use, and contact information
+3. We will respond with approval within 5 business days
+4. Upon approval, you receive full commercial rights for your specific use case
+
+**Failure to obtain permission for Commercial Use violates this license.**
+
+### 2.3 Developer Platform Exception
+
+If you are a registered Developer Platform Member (developer.galion.app), you are granted additional rights:
+
+#### 2.3.1 Full Access License
+- **Complete Commercial Rights** - Use NexusLang v2 in any commercial application
+- **No Permission Required** - Build and deploy commercial products without additional licensing
+- **Platform Integration** - Access to Galion AI, personalities, and advanced features
+- **Production Support** - Priority technical support and updates
+
+#### 2.3.2 Platform Benefits
+- **Nexus AI Access** - Full access to all AI models and personalities
+- **Galion App Integration** - Commercial use rights for Galion platform
+- **Voice-to-Voice APIs** - Unlimited commercial voice processing
+- **Production Deployment** - Commercial deployment rights
+- **API Monetization** - Rights to build commercial applications on our APIs
+
+#### 2.3.3 Registration Process
+1. Visit: https://developer.galion.app/auth/register
+2. Create account (free)
+3. Verify email
+4. Gain immediate commercial rights
+5. Access all platform features
+
+## 3. Restrictions
+
+### 3.1 Prohibited Uses
+You may NOT:
+- Use the original Software for Commercial Use without permission
+- Sell the original Software as-is
+- Claim ownership of the original Software
+- Remove or modify copyright notices
+- Use for illegal activities
+- Redistribute without this license
+
+### 3.2 Attribution Requirements
+When using NexusLang v2, you must:
+- Include this license in all distributions
+- Provide attribution to Galion Studio
+- Not misrepresent the origin of the Software
+
+## 4. Intellectual Property
+
+### 4.1 Ownership
+Galion Studio retains all rights, title, and interest in:
+- The NexusLang v2 brand and trademarks
+- Original source code and algorithms
+- Documentation and educational materials
+- Associated patents and intellectual property
+
+### 4.2 Contributions
+Contributions to NexusLang v2 are licensed under the same terms as this license.
+
+## 5. Warranty and Liability
+
+### 5.1 No Warranty
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+### 5.2 Limitation of Liability
+IN NO EVENT SHALL GALION STUDIO BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+### 5.3 AI-Specific Disclaimers
+- AI-generated content may contain inaccuracies
+- Voice synthesis may have imperfections
+- Users are responsible for their AI applications
+- Galion Studio is not liable for AI decision outcomes
+
+## 6. Termination
+
+This license terminates automatically if you:
+- Violate any terms of this agreement
+- Fail to obtain required commercial permissions
+- Engage in prohibited activities
+
+Upon termination, you must cease all use of the Software.
+
+## 7. Governing Law
+
+This license is governed by the laws of [Jurisdiction to be determined], without regard to conflict of law principles.
+
+## 8. Contact Information
+
+For licensing questions, commercial permissions, or developer platform access:
+
+- **Email:** licensing@galion.app
+- **Platform:** https://developer.galion.app
+- **Support:** support@galion.app
+- **Legal:** legal@galion.app
+
+## 9. Future Updates
+
+This license may be updated. Continued use constitutes acceptance of new terms. Major changes will be communicated to registered developers.
+
+---
+
+## Quick Reference
+
+| Use Case | Hobby | Commercial (Unregistered) | Commercial (Platform Member) |
+|----------|-------|---------------------------|-----------------------------|
+| **Personal Projects** | ✅ Free | ❌ Requires Permission | ✅ Full Access |
+| **Educational Use** | ✅ Free | ❌ Requires Permission | ✅ Full Access |
+| **Commercial Apps** | ❌ Requires Permission | ❌ Requires Permission | ✅ Full Access |
+| **API Integration** | ✅ Free | ❌ Requires Permission | ✅ Full Access |
+| **Voice-to-Voice** | ✅ Free | ❌ Requires Permission | ✅ Full Access |
+| **Redistribution** | ✅ Modified Only | ❌ Requires Permission | ✅ Full Access |
+
+**Join the Developer Platform today for complete commercial freedom:** https://developer.galion.app/auth/register
+
+---
+
+*This license balances open source accessibility with commercial protection. We believe in democratizing AI while ensuring sustainable development.*
+
+**Galion Studio - Democratizing AI Development** 🚀

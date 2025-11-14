@@ -1,0 +1,202 @@
+{
+  "name": "Galion Autonomous Agent System",
+  "description": "A powerful Manus-like autonomous agent system for intelligent task execution, multi-agent collaboration, and human-in-the-loop workflows. Built with FastAPI, React, and advanced AI capabilities.",
+  "version": "1.0.0",
+  "docker": {
+    "image": "galion-agent:latest",
+    "build": {
+      "context": ".",
+      "dockerfile": "runpod/Dockerfile"
+    }
+  },
+  "runtime": {
+    "python": "3.11",
+    "framework": "FastAPI",
+    "gpu": false
+  },
+  "resources": {
+    "cpu": {
+      "min": 2,
+      "max": 8,
+      "default": 4
+    },
+    "memory": {
+      "min": "4GB",
+      "max": "32GB",
+      "default": "8GB"
+    },
+    "storage": {
+      "min": "20GB",
+      "max": "200GB",
+      "default": "50GB"
+    }
+  },
+  "ports": [
+    {
+      "name": "API",
+      "port": 8010,
+      "protocol": "http",
+      "description": "Main API endpoint for task execution"
+    },
+    {
+      "name": "Frontend",
+      "port": 3000,
+      "protocol": "http",
+      "description": "Web interface for task management"
+    },
+    {
+      "name": "Database",
+      "port": 5432,
+      "protocol": "tcp",
+      "description": "PostgreSQL database"
+    },
+    {
+      "name": "Redis",
+      "port": 6379,
+      "protocol": "tcp",
+      "description": "Redis cache and task queue"
+    },
+    {
+      "name": "Nginx",
+      "port": 80,
+      "protocol": "http",
+      "description": "Reverse proxy and load balancer"
+    },
+    {
+      "name": "Monitoring",
+      "port": 9090,
+      "protocol": "http",
+      "description": "Prometheus monitoring"
+    },
+    {
+      "name": "Grafana",
+      "port": 3001,
+      "protocol": "http",
+      "description": "Grafana dashboards"
+    }
+  ],
+  "environment": {
+    "required": [
+      {
+        "name": "OPENAI_API_KEY",
+        "description": "OpenAI API key for LLM capabilities",
+        "type": "secret"
+      }
+    ],
+    "optional": [
+      {
+        "name": "JWT_SECRET_KEY",
+        "description": "Secret key for JWT token generation",
+        "type": "secret",
+        "default": "auto-generated"
+      },
+      {
+        "name": "DATABASE_URL",
+        "description": "PostgreSQL connection string",
+        "type": "string",
+        "default": "postgresql://galion:password@localhost:5432/galion"
+      },
+      {
+        "name": "REDIS_URL",
+        "description": "Redis connection string",
+        "type": "string",
+        "default": "redis://localhost:6379/0"
+      },
+      {
+        "name": "LOG_LEVEL",
+        "description": "Logging level (DEBUG, INFO, WARNING, ERROR)",
+        "type": "string",
+        "default": "INFO"
+      },
+      {
+        "name": "MAX_WORKERS",
+        "description": "Maximum number of worker threads",
+        "type": "number",
+        "default": 4
+      },
+      {
+        "name": "REQUEST_TIMEOUT",
+        "description": "Request timeout in seconds",
+        "type": "number",
+        "default": 300
+      }
+    ]
+  },
+  "startup": {
+    "script": "runpod/startup.sh",
+    "order": [
+      "database",
+      "redis",
+      "backend",
+      "frontend",
+      "nginx",
+      "monitoring"
+    ]
+  },
+  "health": {
+    "endpoint": "/health",
+    "port": 8010,
+    "interval": 30,
+    "timeout": 10,
+    "retries": 3
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics": {
+      "cpu": true,
+      "memory": true,
+      "disk": true,
+      "network": true
+    },
+    "alerts": {
+      "cpu_threshold": 80,
+      "memory_threshold": 85,
+      "disk_threshold": 90
+    }
+  },
+  "features": [
+    "Autonomous Task Execution",
+    "Multi-Agent Collaboration",
+    "Human-in-the-Loop Workflows",
+    "Real-time Monitoring",
+    "Context Awareness",
+    "NLP Task Processing",
+    "Tool Integration Framework",
+    "Workflow Automation",
+    "Quality Assurance Testing"
+  ],
+  "categories": [
+    "AI/ML",
+    "Automation",
+    "Development Tools",
+    "Productivity",
+    "API Services"
+  ],
+  "tags": [
+    "autonomous-agents",
+    "ai-assistant",
+    "task-automation",
+    "multi-agent-system",
+    "fastapi",
+    "react",
+    "postgresql",
+    "redis",
+    "docker"
+  ],
+  "author": {
+    "name": "Galion Platform",
+    "email": "support@galion.app",
+    "website": "https://galion.app"
+  },
+  "license": "MIT",
+  "documentation": {
+    "readme": "README.md",
+    "api": "/docs",
+    "getting_started": "GETTING_STARTED.md"
+  },
+  "support": {
+    "issues": "https://github.com/galion-platform/galion/issues",
+    "discussions": "https://github.com/galion-platform/galion/discussions",
+    "discord": "https://discord.gg/galion"
+  }
+}

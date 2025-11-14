@@ -17,7 +17,7 @@ Features:
 import asyncio
 import psutil
 import shutil
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from pathlib import Path
 import uuid
@@ -34,7 +34,7 @@ class HealthCheckSystem:
     """
     Comprehensive health check system for platform validation.
     """
-    
+
     def __init__(self):
         """Initialize health check system."""
         self.checks = {
@@ -47,11 +47,23 @@ class HealthCheckSystem:
             'extensions': self.check_database_extensions,
             'tables': self.check_database_tables
         }
+
+        # Fast checks for instant agent initialization
+        self.fast_checks = {
+            'database': self.check_database_fast,
+            'redis': self.check_redis_fast,
+            'imports': self.check_imports_fast
+        }
+
+        # Cache for fast health checks (5 second TTL)
+        self._fast_cache: Optional[Dict[str, Any]] = None
+        self._cache_timestamp: Optional[datetime] = None
+        self._cache_ttl_seconds = 5
     
     async def run_all_checks(self) -> Dict[str, Any]:
         """
         Run all health checks.
-        
+
         Returns:
             Dict with health check results for all components
         """
@@ -60,19 +72,19 @@ class HealthCheckSystem:
             'overall_status': 'healthy',
             'checks': {}
         }
-        
+
         # Run all checks
         for check_name, check_func in self.checks.items():
             try:
                 check_result = await check_func()
                 results['checks'][check_name] = check_result
-                
+
                 # Update overall status
                 if check_result['status'] == 'unhealthy':
                     results['overall_status'] = 'unhealthy'
                 elif check_result['status'] == 'degraded' and results['overall_status'] == 'healthy':
                     results['overall_status'] = 'degraded'
-                    
+
             except Exception as e:
                 results['checks'][check_name] = {
                     'status': 'unhealthy',
@@ -80,7 +92,63 @@ class HealthCheckSystem:
                     'error': str(e)
                 }
                 results['overall_status'] = 'unhealthy'
-        
+
+        return results
+
+    async def run_fast_checks(self) -> Dict[str, Any]:
+        """
+        Run fast health checks for instant agent initialization.
+
+        Uses caching for 5 seconds to provide instant responses for repeated calls.
+
+        Returns:
+            Dict with basic health check results
+        """
+        now = datetime.now(timezone.utc)
+
+        # Return cached result if still valid
+        if (self._fast_cache is not None and
+            self._cache_timestamp is not None and
+            (now - self._cache_timestamp).total_seconds() < self._cache_ttl_seconds):
+            # Update timestamp but keep cached data
+            cached_result = self._fast_cache.copy()
+            cached_result['timestamp'] = now.isoformat()
+            cached_result['cached'] = True
+            return cached_result
+
+        # Run fresh checks
+        results = {
+            'timestamp': now.isoformat(),
+            'overall_status': 'healthy',
+            'checks': {},
+            'mode': 'fast',
+            'cached': False
+        }
+
+        # Run fast checks only (database, redis, imports)
+        for check_name, check_func in self.fast_checks.items():
+            try:
+                check_result = await check_func()
+                results['checks'][check_name] = check_result
+
+                # Update overall status
+                if check_result['status'] == 'unhealthy':
+                    results['overall_status'] = 'unhealthy'
+                elif check_result['status'] == 'degraded' and results['overall_status'] == 'healthy':
+                    results['overall_status'] = 'degraded'
+
+            except Exception as e:
+                results['checks'][check_name] = {
+                    'status': 'unhealthy',
+                    'message': f'Fast health check failed: {str(e)}',
+                    'error': str(e)
+                }
+                results['overall_status'] = 'unhealthy'
+
+        # Cache the results
+        self._fast_cache = results.copy()
+        self._cache_timestamp = now
+
         return results
     
     async def check_database(self) -> Dict[str, Any]:
@@ -91,16 +159,18 @@ class HealthCheckSystem:
             Health check result for database
         """
         try:
-            async for db in get_db():
+            # Use session maker directly for health checks
+            session_maker = get_async_session_maker()
+            async with session_maker() as db:
                 # Test basic connectivity with a simple query
                 start_time = asyncio.get_event_loop().time()
                 result = await db.execute(text("SELECT 1"))
                 query_time = (asyncio.get_event_loop().time() - start_time) * 1000
-                
+
                 # Test database info
                 result = await db.execute(text("SELECT version()"))
                 version = result.scalar()
-                
+
                 # Test connection pool
                 result = await db.execute(
                     text("SELECT count(*) FROM pg_stat_activity WHERE datname = :dbname"),
@@ -403,7 +473,9 @@ class HealthCheckSystem:
             Health check result for database extensions
         """
         try:
-            async for db in get_db():
+            # Use session maker directly for health checks
+            session_maker = get_async_session_maker()
+            async with session_maker() as db:
                 required_extensions = ['uuid-ossp', 'vector']
                 installed = []
                 missing = []
@@ -461,7 +533,9 @@ class HealthCheckSystem:
             Health check result for database tables
         """
         try:
-            async for db in get_db():
+            # Use session maker directly for health checks
+            session_maker = get_async_session_maker()
+            async with session_maker() as db:
                 critical_tables = [
                     'users',
                     'sessions',
@@ -734,6 +808,108 @@ class HealthCheckSystem:
         return 'localhost'
 
 
+    async def check_database_fast(self) -> Dict[str, Any]:
+        """
+        Fast database connectivity check for agent initialization.
+
+        Returns:
+            Basic database health check result
+        """
+        try:
+            # Simple synchronous database connection test
+            import psycopg2
+            conn = psycopg2.connect(
+                host="postgres",  # Docker service name
+                port=5432,
+                database="galion_platform",  # From docker-compose
+                user="nexus",  # From docker-compose
+                password="dev_password_2025"  # From docker-compose
+            )
+            conn.close()
+            return {
+                'status': 'healthy',
+                'message': 'Database connection successful',
+                'details': {'connected': True}
+            }
+
+        except Exception as e:
+            return {
+                'status': 'unhealthy',
+                'message': f'Database connection failed: {str(e)}',
+                'error': str(e)
+            }
+
+    async def check_redis_fast(self) -> Dict[str, Any]:
+        """
+        Fast Redis connectivity check for agent initialization.
+
+        Returns:
+            Basic Redis health check result
+        """
+        try:
+            # Simple Redis connection test
+            import redis
+            r = redis.Redis(
+                host="redis",  # Docker service name
+                port=6379,
+                password="dev_redis_2025",  # From docker-compose
+                decode_responses=True
+            )
+            r.ping()
+            r.close()
+            return {
+                'status': 'healthy',
+                'message': 'Redis connection successful',
+                'details': {'connected': True}
+            }
+
+        except Exception as e:
+            return {
+                'status': 'degraded',
+                'message': f'Redis check failed (non-critical): {str(e)}',
+                'details': {'connected': False, 'fallback_mode': True}
+            }
+
+    async def check_imports_fast(self) -> Dict[str, Any]:
+        """
+        Fast critical imports check for agent initialization.
+
+        Returns:
+            Basic imports health check result
+        """
+        try:
+            # Only check the most critical imports for fast startup
+            critical_imports = ['fastapi', 'uvicorn', 'sqlalchemy']
+
+            failed_imports = []
+
+            for module_name in critical_imports:
+                try:
+                    __import__(module_name)
+                except ImportError:
+                    failed_imports.append(module_name)
+
+            if not failed_imports:
+                return {
+                    'status': 'healthy',
+                    'message': 'Critical imports available',
+                    'details': {'checked': critical_imports}
+                }
+            else:
+                return {
+                    'status': 'unhealthy',
+                    'message': f'Missing critical imports: {", ".join(failed_imports)}',
+                    'details': {'failed': failed_imports}
+                }
+
+        except Exception as e:
+            return {
+                'status': 'degraded',
+                'message': f'Import check failed: {str(e)}',
+                'error': str(e)
+            }
+
+
 # Global health check system instance
 _health_check_system: Optional[HealthCheckSystem] = None
 
@@ -741,14 +917,14 @@ _health_check_system: Optional[HealthCheckSystem] = None
 def get_health_check_system() -> HealthCheckSystem:
     """
     Get or create global health check system instance.
-    
+
     Returns:
         HealthCheckSystem instance
     """
     global _health_check_system
-    
+
     if _health_check_system is None:
         _health_check_system = HealthCheckSystem()
-    
+
     return _health_check_system
 

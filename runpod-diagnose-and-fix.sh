@@ -160,9 +160,7 @@ fi
 # ============================================================================
 log_section "STEP 4: Testing Python Imports"
 
-cd "$BACKEND_DIR"
-
-# Set PYTHONPATH
+# Set PYTHONPATH for proper module resolution
 export PYTHONPATH="$PROJECT_DIR:$PROJECT_DIR/v2"
 log_info "PYTHONPATH set to: $PYTHONPATH"
 
@@ -174,9 +172,10 @@ else
     log_error "FastAPI import failed"
 fi
 
-# Test main.py import
+# Test main.py import with proper module path
 log_info "Testing main.py import..."
-IMPORT_TEST=$(python -c "from main import app; print('OK')" 2>&1)
+cd "$PROJECT_DIR"
+IMPORT_TEST=$(python -c "from v2.backend.main import app; print('OK')" 2>&1)
 if echo "$IMPORT_TEST" | grep -q "OK"; then
     log_success "main.py imports successful"
 else
@@ -204,7 +203,8 @@ fi
 # ============================================================================
 log_section "STEP 6: Starting Web Server"
 
-cd "$BACKEND_DIR"
+# Stay in project directory for proper module resolution
+cd "$PROJECT_DIR"
 
 log_info "Server configuration:"
 log_info "  - Host: 0.0.0.0"
@@ -213,9 +213,9 @@ log_info "  - Workers: 2"
 log_info "  - Backend Dir: $BACKEND_DIR"
 log_info "  - Log File: $LOG_DIR/galion-backend.log"
 
-# Start server
+# Start server with proper module path
 log_info "Starting server in background..."
-nohup python -m uvicorn main:app \
+nohup python -m uvicorn v2.backend.main:app \
     --host 0.0.0.0 \
     --port $PORT \
     --workers 2 \

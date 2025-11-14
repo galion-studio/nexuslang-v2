@@ -52,7 +52,7 @@ class DatabaseSetup:
         # Parse connection details
         url_parts = db_url.replace('postgresql://', '').split('/')
         self.db_name = url_parts[1].split('?')[0]
-        self.base_url = '/'.join(url_parts[:-1])
+        self.base_url = f"postgresql://{'/'.join(url_parts[:-1])}"
 
     def connect(self, db_name=None):
         """Connect to database (optionally different database)"""

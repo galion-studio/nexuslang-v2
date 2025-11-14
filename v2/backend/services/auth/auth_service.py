@@ -20,17 +20,18 @@ from typing import Optional, Dict, Any
 import secrets
 import hashlib
 import jwt
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...models.user import User
-from ...core.config import settings
-from ...core.database import get_db
+# First principles: Absolute imports
+from models.user import User
+from core.config import settings
+from core.database import get_db_session
 
 
 class AuthService:
     """Authentication service for user management."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     def hash_password(self, password: str) -> str:
@@ -51,31 +52,31 @@ class AuthService:
         if expires_delta:
             expire = datetime.utcnow() + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRATION_HOURS * 60)
+            expire = datetime.utcnow() + timedelta(hours=settings.jwt_expiration_hours)
 
         to_encode.update({"exp": expire, "type": "access"})
-        encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+        encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
         return encoded_jwt
 
     def create_refresh_token(self, data: Dict[str, Any]) -> str:
         """Create JWT refresh token."""
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.utcnow() + timedelta(days=settings.jwt_refresh_token_expire_days)
         to_encode.update({"exp": expire, "type": "refresh"})
-        encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+        encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
         return encoded_jwt
 
     def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Verify and decode JWT token."""
         try:
-            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+            payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
             return payload
         except jwt.ExpiredSignatureError:
             return None
         except jwt.InvalidTokenError:
             return None
 
-    def register_user(self, email: str, username: str, password: str, **kwargs) -> Dict[str, Any]:
+    async def register_user(self, email: str, username: str, password: str, **kwargs) -> Dict[str, Any]:
         """
         Register a new user with comprehensive validation.
 
@@ -96,12 +97,15 @@ class AuthService:
             return {"success": False, "error": "Password must be at least 8 characters long"}
 
         # Check if user already exists
-        existing_user = self.db.query(User).filter(
-            (User.email == email) | (User.username == username)
-        ).first()
+        result = await self.db.execute(
+            self.db.query(User).filter(
+                (User.email == email.lower()) | (User.username == username)
+            )
+        )
+        existing_user = result.scalar_one_or_none()
 
         if existing_user:
-            if existing_user.email == email:
+            if existing_user.email == email.lower():
                 return {"success": False, "error": "Email already registered"}
             else:
                 return {"success": False, "error": "Username already taken"}
@@ -122,14 +126,14 @@ class AuthService:
             )
 
             self.db.add(user)
-            self.db.commit()
-            self.db.refresh(user)
+            await self.db.commit()
+            await self.db.refresh(user)
 
             # Generate verification token
             verification_token = secrets.token_urlsafe(32)
             user.verification_token = verification_token
-            user.verification_token_expires = datetime.utcnow() + timedelta(hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS)
-            self.db.commit()
+            user.verification_token_expires = datetime.utcnow() + timedelta(hours=settings.email_verification_token_expiry_hours)
+            await self.db.commit()
 
             # TODO: Send verification email
 
@@ -141,16 +145,19 @@ class AuthService:
             }
 
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             return {"success": False, "error": f"Registration failed: {str(e)}"}
 
-    def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
+    async def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
         """
         Authenticate user with email and password.
 
         Returns user data and tokens if successful, None if failed.
         """
-        user = self.db.query(User).filter(User.email == email.lower()).first()
+        result = await self.db.execute(
+            self.db.query(User).filter(User.email == email.lower())
+        )
+        user = result.scalar_one_or_none()
 
         if not user or not user.is_active:
             return None
@@ -160,7 +167,7 @@ class AuthService:
 
         # Update last login
         user.last_login = datetime.utcnow()
-        self.db.commit()
+        await self.db.commit()
 
         # Generate tokens
         token_data = {"sub": str(user.id), "email": user.email, "username": user.username}
@@ -172,10 +179,10 @@ class AuthService:
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
-            "expires_in": settings.JWT_EXPIRATION_HOURS * 60 * 60  # seconds
+            "expires_in": settings.jwt_expiration_hours * 60 * 60  # seconds
         }
 
-    def refresh_access_token(self, refresh_token: str) -> Optional[Dict[str, Any]]:
+    async def refresh_access_token(self, refresh_token: str) -> Optional[Dict[str, Any]]:
         """Refresh access token using refresh token."""
         payload = self.verify_token(refresh_token)
 
@@ -183,7 +190,10 @@ class AuthService:
             return None
 
         user_id = payload.get("sub")
-        user = self.db.query(User).filter(User.id == int(user_id)).first()
+        result = await self.db.execute(
+            self.db.query(User).filter(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
 
         if not user or not user.is_active:
             return None
@@ -195,10 +205,10 @@ class AuthService:
         return {
             "access_token": new_access_token,
             "token_type": "bearer",
-            "expires_in": settings.JWT_EXPIRATION_HOURS * 60 * 60
+            "expires_in": settings.jwt_expiration_hours * 60 * 60
         }
 
-    def get_current_user(self, token: str) -> Optional[User]:
+    async def get_current_user(self, token: str) -> Optional[User]:
         """Get current user from JWT token."""
         payload = self.verify_token(token)
 
@@ -206,16 +216,22 @@ class AuthService:
             return None
 
         user_id = payload.get("sub")
-        user = self.db.query(User).filter(User.id == int(user_id)).first()
+        result = await self.db.execute(
+            self.db.query(User).filter(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
 
         if not user or not user.is_active:
             return None
 
         return user
 
-    def initiate_password_reset(self, email: str) -> Dict[str, Any]:
+    async def initiate_password_reset(self, email: str) -> Dict[str, Any]:
         """Initiate password reset process."""
-        user = self.db.query(User).filter(User.email == email.lower()).first()
+        result = await self.db.execute(
+            self.db.query(User).filter(User.email == email.lower())
+        )
+        user = result.scalar_one_or_none()
 
         if not user:
             # Don't reveal if email exists for security
@@ -224,9 +240,9 @@ class AuthService:
         # Generate reset token
         reset_token = secrets.token_urlsafe(32)
         user.reset_token = reset_token
-        user.reset_token_expires = datetime.utcnow() + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRY_HOURS)
+        user.reset_token_expires = datetime.utcnow() + timedelta(hours=settings.password_reset_token_expiry_hours)
 
-        self.db.commit()
+        await self.db.commit()
 
         # TODO: Send password reset email
 
@@ -351,9 +367,6 @@ class AuthService:
 
 
 # Global auth service instance
-def get_auth_service(db: Session = None) -> AuthService:
+def get_auth_service(db) -> AuthService:
     """Get authentication service instance."""
-    if db is None:
-        # Get from dependency injection
-        db = next(get_db())
     return AuthService(db)

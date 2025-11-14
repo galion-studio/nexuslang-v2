@@ -35,4 +35,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # Set Python path and run application
 ENV PYTHONPATH=/app
-CMD ["python", "-m", "start"]
+WORKDIR /app
+CMD ["python", "start.py"]

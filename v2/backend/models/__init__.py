@@ -1,9 +1,4 @@
-"""
-Database Models Package
-All SQLAlchemy models for NexusLang v2.
-"""
+# Models package
+from .user import User, UserCreate, UserUpdate
 
-from .user import User, Base
-from .project import Project
-
-__all__ = ["User", "Project", "Base"]
+__all__ = ["User", "UserCreate", "UserUpdate"]

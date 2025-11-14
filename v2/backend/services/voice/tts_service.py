@@ -1,177 +1,177 @@
 """
-Text-to-Speech Service
-Uses Coqui TTS for speech synthesis.
+Backend Text-to-Speech Service
+Handles server-side text-to-speech conversion using OpenAI TTS API
 """
 
-from typing import Optional, Dict, Any
-import tempfile
-from pathlib import Path
 import os
+import logging
+from typing import Optional, Dict, Any
+import openai
+from pydantic import BaseModel
 
-from ...core.config import settings
+logger = logging.getLogger(__name__)
 
 
-class TTSService:
+class TTSRequest(BaseModel):
+    """TTS request model"""
+    text: str
+    voice: str = "alloy"
+    model: str = "tts-1"
+    response_format: str = "mp3"
+    speed: float = 1.0
+
+
+class TTSResponse(BaseModel):
+    """TTS response model"""
+    audio_data: bytes
+    content_type: str
+    duration_estimate: float
+    processing_time: float
+    voice: str
+    text: str
+
+
+class BackendTTSService:
     """
-    Text-to-Speech service using Coqui TTS.
+    Backend TTS service using OpenAI TTS API
     """
-    
-    def __init__(self, model_name: Optional[str] = None):
+
+    def __init__(self):
+        self.api_key = os.getenv("OPENAI_API_KEY")
+        if not self.api_key:
+            logger.warning("OPENAI_API_KEY not found, TTS service will not work")
+
+        # Initialize OpenAI client
+        self.client = openai.OpenAI(api_key=self.api_key) if self.api_key else None
+
+        # Voice configurations
+        self.voices = {
+            "alloy": {"gender": "neutral", "style": "balanced"},
+            "echo": {"gender": "male", "style": "warm"},
+            "fable": {"gender": "female", "style": "storytelling"},
+            "onyx": {"gender": "male", "style": "deep"},
+            "nova": {"gender": "female", "style": "young"},
+            "shimmer": {"gender": "female", "style": "bright"}
+        }
+
+    async def generate_speech(self, request: TTSRequest) -> TTSResponse:
         """
-        Initialize TTS service.
-        
+        Generate speech from text using OpenAI TTS API
+
         Args:
-            model_name: TTS model name
+            request: TTS request with text and settings
+
+        Returns:
+            TTS response with audio data
+
+        Raises:
+            Exception: If speech generation fails
         """
-        self.model_name = model_name or settings.TTS_MODEL
-        self.device = settings.TTS_DEVICE
-        self.tts = None
-        
-    def load_model(self):
+        if not self.client:
+            raise Exception("OpenAI API key not configured")
+
+        try:
+            import time
+            start_time = time.time()
+
+            # Validate voice
+            if request.voice not in self.voices:
+                raise Exception(f"Unsupported voice: {request.voice}")
+
+            # Validate speed
+            if not (0.25 <= request.speed <= 4.0):
+                raise Exception("Speed must be between 0.25 and 4.0")
+
+            # Call OpenAI TTS API
+            response = self.client.audio.speech.create(
+                model=request.model,
+                voice=request.voice,
+                input=request.text,
+                response_format=request.response_format,
+                speed=request.speed
+            )
+
+            # Get audio data
+            audio_data = b""
+            for chunk in response.iter_bytes():
+                audio_data += chunk
+
+            processing_time = time.time() - start_time
+
+            # Estimate duration (rough calculation)
+            words_per_minute = 150  # Average speaking rate
+            word_count = len(request.text.split())
+            duration_estimate = (word_count / words_per_minute) * 60 / request.speed
+
+            # Determine content type
+            content_type_map = {
+                "mp3": "audio/mpeg",
+                "opus": "audio/opus",
+                "aac": "audio/aac",
+                "flac": "audio/flac"
+            }
+            content_type = content_type_map.get(request.response_format, "audio/mpeg")
+
+            tts_response = TTSResponse(
+                audio_data=audio_data,
+                content_type=content_type,
+                duration_estimate=duration_estimate,
+                processing_time=processing_time,
+                voice=request.voice,
+                text=request.text
+            )
+
+            logger.info(f"TTS generation completed in {processing_time:.2f}s for text: '{request.text[:50]}...'")
+            return tts_response
+
+        except Exception as e:
+            logger.error(f"TTS generation failed: {str(e)}")
+            raise Exception(f"Text-to-speech generation failed: {str(e)}")
+
+    async def get_available_voices(self) -> Dict[str, Dict[str, Any]]:
         """
-        Load TTS model.
-        Lazy loading to save memory.
+        Get list of available voices with metadata
+
+        Returns:
+            Dictionary of voice configurations
         """
-        if self.tts is None:
-            print(f"Loading TTS model: {self.model_name} on {self.device}")
-            
-            try:
-                from TTS.api import TTS
-                self.tts = TTS(model_name=self.model_name, progress_bar=False)
-                
-                if self.device == "cuda":
-                    self.tts.to("cuda")
-                
-                print("✅ TTS model loaded")
-            except ImportError:
-                print("❌ TTS not installed. Install with: pip install TTS")
-                raise
-    
-    async def synthesize(
-        self,
-        text: str,
-        voice_id: Optional[str] = None,
-        emotion: Optional[str] = None,
-        speed: float = 1.0,
-        language: str = "en"
-    ) -> bytes:
+        return self.voices
+
+    async def estimate_cost(self, text: str, model: str = "tts-1") -> float:
         """
-        Synthesize speech from text.
-        
+        Estimate cost for TTS generation
+
         Args:
             text: Text to synthesize
-            voice_id: Voice model ID (uses default if None)
-            emotion: Emotion/tone (happy, sad, neutral, etc.)
-            speed: Speech speed multiplier
-            language: Language code
-        
+            model: TTS model to use
+
         Returns:
-            Audio bytes (WAV format)
+            Estimated cost in USD
         """
-        # Load model if not loaded
-        self.load_model()
-        
-        # Create temp file for output
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
-            temp_path = f.name
-        
-        try:
-            # Apply emotion/tone adjustments to text
-            if emotion:
-                text = self._apply_emotion(text, emotion)
-            
-            # Synthesize
-            self.tts.tts_to_file(
-                text=text,
-                file_path=temp_path,
-                speaker=voice_id,
-                language=language,
-                speed=speed
-            )
-            
-            # Read audio file
-            with open(temp_path, 'rb') as f:
-                audio_data = f.read()
-            
-            return audio_data
-        
-        finally:
-            # Clean up temp file
-            Path(temp_path).unlink(missing_ok=True)
-    
-    def _apply_emotion(self, text: str, emotion: str) -> str:
-        """
-        Apply emotion to text using prosody markers.
-        Different TTS models handle this differently.
-        """
-        # Emotion mappings (simplified)
-        emotion_markers = {
-            "happy": "😊 ",
-            "excited": "🎉 ",
-            "sad": "😢 ",
-            "angry": "😠 ",
-            "calm": "😌 ",
-            "thoughtful": "🤔 ",
-            "friendly": "👋 ",
-            "professional": ""
+        # OpenAI TTS pricing (per 1K characters)
+        pricing = {
+            "tts-1": 0.015,
+            "tts-1-hd": 0.030
         }
-        
-        marker = emotion_markers.get(emotion.lower(), "")
-        return marker + text
-    
-    async def list_voices(self) -> list[str]:
+
+        rate = pricing.get(model, 0.015)
+        char_count = len(text)
+
+        # Calculate cost for 1K characters
+        cost_per_1k = rate
+        total_cost = (char_count / 1000) * cost_per_1k
+
+        return round(total_cost, 6)
+
+    def is_available(self) -> bool:
         """
-        Get list of available voices.
-        """
-        self.load_model()
-        
-        try:
-            # Get speakers from model
-            if hasattr(self.tts, 'speakers'):
-                return list(self.tts.speakers)
-            return ["default"]
-        except:
-            return ["default"]
-    
-    async def clone_voice(
-        self,
-        audio_samples: list[bytes],
-        voice_name: str
-    ) -> str:
-        """
-        Clone a voice from audio samples.
-        Uses voice conversion or speaker encoder.
-        
-        Args:
-            audio_samples: List of audio bytes
-            voice_name: Name for cloned voice
-        
+        Check if TTS service is available
+
         Returns:
-            voice_id of cloned voice
+            True if service is configured and ready
         """
-        # TODO: Implement voice cloning
-        # This requires:
-        # 1. Speaker encoder model
-        # 2. Fine-tuning on samples
-        # 3. Saving voice embeddings
-        
-        print(f"Voice cloning requested: {voice_name}")
-        print(f"Samples: {len(audio_samples)}")
-        
-        # For now, return a placeholder
-        voice_id = f"cloned_{voice_name}_{hash(audio_samples[0]) % 10000}"
-        
-        return voice_id
+        return self.client is not None
 
 
-# Global TTS service instance
-_tts_service = None
-
-
-def get_tts_service() -> TTSService:
-    """Get or create global TTS service."""
-    global _tts_service
-    if _tts_service is None:
-        _tts_service = TTSService()
-    return _tts_service
-
+# Global instance
+tts_service = BackendTTSService()

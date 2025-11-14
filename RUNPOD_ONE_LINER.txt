@@ -1,0 +1,109 @@
+================================================================================
+🚀 GALION STUDIO RUNPOD - INSTANT FIX FOR 521 ERROR
+================================================================================
+
+PROBLEM: galion.studio shows Cloudflare Error 521 (Web server is down)
+
+SOLUTION: Copy and paste this ONE command into your RunPod terminal:
+
+================================================================================
+COPY THIS COMMAND:
+================================================================================
+
+cd /workspace/project-nexus && export PYTHONPATH=/workspace/project-nexus:/workspace/project-nexus/v2 && pkill -f uvicorn || true && mkdir -p /workspace/logs && cd v2/backend && nohup python -m uvicorn main:app --host 0.0.0.0 --port 8080 --workers 2 > /workspace/logs/galion-backend.log 2>&1 & sleep 3 && echo "✅ Server started!" && curl http://localhost:8080/health && echo "" && echo "📍 Your RunPod IP:" && curl -s ifconfig.me && echo "" && echo "👆 Configure this IP in Cloudflare DNS (A record)"
+
+================================================================================
+
+WHAT IT DOES:
+- Kills any old server processes
+- Starts fresh server on port 8080 (Cloudflare-compatible)
+- Creates log files
+- Tests if server is healthy
+- Shows your RunPod IP address
+
+AFTER RUNNING THE COMMAND:
+1. Copy the IP address shown (e.g., 123.45.67.89)
+2. Go to Cloudflare → galion.studio → DNS
+3. Add A record: @ → YOUR_IP (Proxy ON - orange cloud)
+4. Set SSL/TLS to "Flexible" or "Full"
+5. Wait 2 minutes
+6. Visit: https://galion.studio/health
+
+================================================================================
+ALTERNATIVE: RUN THE SCRIPT
+================================================================================
+
+If you have the script file:
+
+./runpod-start-server.sh
+
+================================================================================
+VERIFY IT'S WORKING:
+================================================================================
+
+# Check server locally
+curl http://localhost:8080/health
+
+# Check from your IP (replace with your RunPod IP)
+curl http://YOUR_RUNPOD_IP:8080/health
+
+# After Cloudflare setup
+curl https://galion.studio/health
+
+================================================================================
+VIEW LOGS:
+================================================================================
+
+tail -f /workspace/logs/galion-backend.log
+
+================================================================================
+STOP SERVER:
+================================================================================
+
+pkill -f uvicorn
+
+================================================================================
+COMMON PORTS INFO:
+================================================================================
+
+Port 8000: ❌ Not compatible with Cloudflare proxy
+Port 8080: ✅ Compatible with Cloudflare proxy (use this!)
+Port 8443: ✅ Also compatible (HTTPS)
+
+That's why we use port 8080!
+
+================================================================================
+TROUBLESHOOTING:
+================================================================================
+
+Issue: "ModuleNotFoundError"
+Fix: cd /workspace/project-nexus && pip install -r requirements.txt
+
+Issue: "Port already in use"
+Fix: pkill -f uvicorn && sleep 2 && run the command again
+
+Issue: "Directory not found"
+Fix: Check if your code is in /workspace/project-nexus
+     You may need to upload it to RunPod first
+
+Issue: Still 521 error after Cloudflare setup
+Fix: 
+  1. Verify server running: curl http://localhost:8080/health
+  2. Check RunPod pod is running (not stopped)
+  3. Verify port 8080 is exposed in RunPod settings
+  4. Try turning OFF Cloudflare proxy (gray cloud) temporarily
+  5. Wait 5 minutes for DNS to propagate
+
+================================================================================
+NEED MORE HELP?
+================================================================================
+
+Read the full guide: RUNPOD_QUICK_START.md
+Or detailed guide: RUNPOD_GALION_STUDIO_DEPLOYMENT.md
+
+================================================================================
+
+🎯 Your server should be online in 2 minutes!
+
+================================================================================
+

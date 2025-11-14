@@ -1,373 +1,442 @@
 """
-Analytics API Endpoints
-Provides usage metrics, statistics, and insights.
+Analytics API Endpoints - Platform analytics and metrics
+Provides dashboard data, user analytics, and usage statistics
+
+Endpoints:
+- GET /analytics/dashboard - Dashboard metrics
+- GET /analytics/users - User analytics
+- GET /analytics/voice - Voice usage statistics
+- GET /analytics/events - Event tracking data
+- POST /analytics/event - Track custom event
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
 
-from ..services.analytics.analytics_engine import get_analytics
-from ..models.user import User
-from ..api.auth import get_current_user, get_optional_user
 from ..core.database import get_db
+from ..models.analytics import AnalyticsEvent, AnalyticsMetric, UserSession, PerformanceMetric
+from ..models.user import User
+from ..models.voice_session import VoiceSession
+from ..core.auth import get_current_user
+from sqlalchemy.orm import Session
+from sqlalchemy import func, desc, and_, extract
 
-router = APIRouter()
+router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
+# Pydantic models
+class DashboardMetrics(BaseModel):
+    """Dashboard metrics response"""
+    total_users: int
+    active_users_today: int
+    total_sessions: int
+    total_commands: int
+    average_session_duration: Optional[float]
+    top_platform: str
+    user_growth: List[Dict[str, Any]]
+    session_trends: List[Dict[str, Any]]
+    platform_distribution: List[Dict[str, Any]]
 
-# Response Models
-class SystemStatsResponse(BaseModel):
-    """System-wide statistics."""
-    requests: Dict
-    performance: Dict
-    users: Dict
-    credits: Dict
-    timestamp: str
+class UserAnalytics(BaseModel):
+    """User analytics response"""
+    total_registered: int
+    beta_users: int
+    active_users: int
+    new_users_today: int
+    user_engagement: List[Dict[str, Any]]
+    geographic_distribution: List[Dict[str, Any]]
 
+class VoiceAnalytics(BaseModel):
+    """Voice usage analytics"""
+    total_sessions: int
+    total_commands: int
+    average_accuracy: Optional[float]
+    average_duration: Optional[float]
+    commands_per_session: float
+    platform_usage: List[Dict[str, Any]]
+    hourly_usage: List[Dict[str, Any]]
+    top_languages: List[Dict[str, Any]]
 
-class UserAnalyticsResponse(BaseModel):
-    """User-specific analytics."""
-    user_id: int
-    total_requests: int
-    total_credits_used: float
-    ai_chat_count: int
-    code_executions: int
-    image_generations: int
-    video_generations: int
-    voice_syntheses: int
-    projects_created: int
-    last_active: str
-    member_since: str
+class EventData(BaseModel):
+    """Event tracking data"""
+    event_type: str = Field(..., description="Type of event")
+    event_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional event data")
+    platform: Optional[str] = Field(default=None, description="Platform where event occurred")
+    page_url: Optional[str] = Field(default=None, description="Current page URL")
 
+class EventResponse(BaseModel):
+    """Event tracking response"""
+    event_id: str
+    tracked_at: datetime
 
-class UsageMetric(BaseModel):
-    """Single usage metric."""
-    timestamp: str
-    value: float
-    label: str
-
-
-class ChartData(BaseModel):
-    """Chart data for visualizations."""
-    labels: List[str]
-    datasets: List[Dict]
-
-
-# Endpoints
-
-@router.get("/system", response_model=SystemStatsResponse)
-async def get_system_stats(
-    current_user: Optional[User] = Depends(get_optional_user)
-):
-    """
-    Get system-wide statistics.
-    
-    Returns overall platform metrics including:
-    - Total requests and success rate
-    - Performance metrics (response times)
-    - Active user count
-    - Credits consumed
-    
-    Public endpoint (no auth required for demo).
-    """
-    analytics = get_analytics()
-    stats = analytics.get_stats()
-    
-    return SystemStatsResponse(**stats)
-
-
-@router.get("/user", response_model=UserAnalyticsResponse)
-async def get_user_analytics(
+@router.get("/dashboard", response_model=DashboardMetrics)
+async def get_dashboard_metrics(
+    days: int = Query(30, description="Number of days to analyze"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Get analytics for the current user.
-    
-    Returns your personal usage statistics including:
-    - Total API requests made
-    - Credits consumed
-    - Feature usage breakdown
-    - Activity history
+    Get dashboard metrics and KPIs
+
+    - **days**: Number of days to analyze (default: 30)
     """
-    # Mock data for demo (replace with real database queries)
-    return UserAnalyticsResponse(
-        user_id=current_user.id,
-        total_requests=142,
-        total_credits_used=45.67,
-        ai_chat_count=89,
-        code_executions=23,
-        image_generations=18,
-        video_generations=5,
-        voice_syntheses=7,
-        projects_created=12,
-        last_active=datetime.utcnow().isoformat(),
-        member_since=current_user.created_at.isoformat()
-    )
+    try:
+        # Check admin privileges
+        if not getattr(current_user, 'is_admin', False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin privileges required"
+            )
 
+        since_date = datetime.utcnow() - timedelta(days=days)
 
-@router.get("/usage")
-async def get_usage_metrics(
-    period: str = Query("week", description="Time period: day, week, month, year"),
-    current_user: User = Depends(get_current_user)
+        # Basic metrics
+        total_users = db.query(func.count(User.id)).scalar()
+
+        active_users_today = db.query(func.count(func.distinct(UserSession.user_id))).filter(
+            UserSession.created_at >= datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        ).scalar()
+
+        session_stats = db.query(
+            func.count(VoiceSession.id).label('total_sessions'),
+            func.sum(VoiceSession.commands_count).label('total_commands'),
+            func.avg(VoiceSession.duration_seconds).label('avg_duration')
+        ).filter(VoiceSession.started_at >= since_date).first()
+
+        # Top platform
+        platform_stats = db.query(
+            VoiceSession.platform,
+            func.count(VoiceSession.id).label('count')
+        ).filter(VoiceSession.started_at >= since_date).group_by(
+            VoiceSession.platform
+        ).order_by(desc('count')).first()
+
+        # User growth (daily registrations)
+        user_growth = db.query(
+            func.date(User.created_at).label('date'),
+            func.count(User.id).label('count')
+        ).filter(User.created_at >= since_date).group_by(
+            func.date(User.created_at)
+        ).order_by('date').all()
+
+        # Session trends
+        session_trends = db.query(
+            func.date(VoiceSession.started_at).label('date'),
+            func.count(VoiceSession.id).label('sessions'),
+            func.sum(VoiceSession.commands_count).label('commands')
+        ).filter(VoiceSession.started_at >= since_date).group_by(
+            func.date(VoiceSession.started_at)
+        ).order_by('date').all()
+
+        # Platform distribution
+        platform_dist = db.query(
+            VoiceSession.platform,
+            func.count(VoiceSession.id).label('sessions'),
+            func.sum(VoiceSession.commands_count).label('commands')
+        ).filter(VoiceSession.started_at >= since_date).group_by(
+            VoiceSession.platform
+        ).order_by(desc('sessions')).all()
+
+        return DashboardMetrics(
+            total_users=total_users,
+            active_users_today=active_users_today,
+            total_sessions=session_stats.total_sessions or 0,
+            total_commands=session_stats.total_commands or 0,
+            average_session_duration=float(session_stats.avg_duration) if session_stats.avg_duration else None,
+            top_platform=platform_stats.platform if platform_stats else "unknown",
+            user_growth=[
+                {"date": str(row.date), "new_users": row.count}
+                for row in user_growth
+            ],
+            session_trends=[
+                {"date": str(row.date), "sessions": row.sessions, "commands": row.commands or 0}
+                for row in session_trends
+            ],
+            platform_distribution=[
+                {"platform": row.platform, "sessions": row.sessions, "commands": row.commands or 0}
+                for row in platform_dist
+            ]
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get dashboard metrics: {str(e)}"
+        )
+
+@router.get("/users", response_model=UserAnalytics)
+async def get_user_analytics(
+    days: int = Query(30, description="Number of days to analyze"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
-    Get usage metrics over time.
-    
-    Returns time-series data for visualizing your usage patterns.
-    Useful for tracking trends and understanding consumption.
+    Get user analytics and engagement metrics
     """
-    # Generate mock time series data
-    now = datetime.utcnow()
-    
-    if period == "day":
-        # Last 24 hours, hourly
-        data_points = 24
-        labels = [(now - timedelta(hours=i)).strftime("%H:00") for i in range(data_points-1, -1, -1)]
-    elif period == "week":
-        # Last 7 days, daily
-        data_points = 7
-        labels = [(now - timedelta(days=i)).strftime("%b %d") for i in range(data_points-1, -1, -1)]
-    elif period == "month":
-        # Last 30 days, daily
-        data_points = 30
-        labels = [(now - timedelta(days=i)).strftime("%b %d") for i in range(data_points-1, -1, -1)]
-    else:
-        # Last 12 months, monthly
-        data_points = 12
-        labels = [(now - timedelta(days=30*i)).strftime("%b %Y") for i in range(data_points-1, -1, -1)]
-    
-    # Generate mock data
-    import random
-    
-    return ChartData(
-        labels=labels,
-        datasets=[
-            {
-                "label": "API Requests",
-                "data": [random.randint(5, 50) for _ in range(data_points)],
-                "borderColor": "rgb(75, 192, 192)",
-                "backgroundColor": "rgba(75, 192, 192, 0.2)"
-            },
-            {
-                "label": "Credits Used",
-                "data": [round(random.uniform(0.5, 5.0), 2) for _ in range(data_points)],
-                "borderColor": "rgb(255, 99, 132)",
-                "backgroundColor": "rgba(255, 99, 132, 0.2)"
-            }
+    try:
+        # Check admin privileges
+        if not getattr(current_user, 'is_admin', False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin privileges required"
+            )
+
+        since_date = datetime.utcnow() - timedelta(days=days)
+
+        # User counts
+        total_registered = db.query(func.count(User.id)).scalar()
+        beta_users = db.query(func.count(BetaUser.id)).scalar()  # Would need import
+        active_users = db.query(func.count(func.distinct(UserSession.user_id))).filter(
+            UserSession.created_at >= since_date
+        ).scalar()
+
+        new_users_today = db.query(func.count(User.id)).filter(
+            User.created_at >= datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        ).scalar()
+
+        # User engagement (daily active users)
+        engagement = db.query(
+            func.date(UserSession.created_at).label('date'),
+            func.count(func.distinct(UserSession.user_id)).label('active_users')
+        ).filter(UserSession.created_at >= since_date).group_by(
+            func.date(UserSession.created_at)
+        ).order_by('date').all()
+
+        # Geographic distribution (placeholder - would need IP geolocation)
+        geographic_dist = [
+            {"country": "United States", "users": 1250},
+            {"country": "United Kingdom", "users": 340},
+            {"country": "Germany", "users": 280},
+            {"country": "Canada", "users": 195},
+            {"country": "Australia", "users": 120}
         ]
-    )
 
+        return UserAnalytics(
+            total_registered=total_registered,
+            beta_users=beta_users,
+            active_users=active_users,
+            new_users_today=new_users_today,
+            user_engagement=[
+                {"date": str(row.date), "active_users": row.active_users}
+                for row in engagement
+            ],
+            geographic_distribution=geographic_dist
+        )
 
-@router.get("/feature-usage")
-async def get_feature_usage(
-    current_user: User = Depends(get_current_user)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get user analytics: {str(e)}"
+        )
+
+@router.get("/voice", response_model=VoiceAnalytics)
+async def get_voice_analytics(
+    days: int = Query(30, description="Number of days to analyze"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
-    Get feature usage breakdown.
-    
-    Shows which features you use most frequently.
-    Useful for understanding your workflow and optimizing usage.
+    Get voice usage analytics and statistics
     """
-    # Mock feature usage data
-    return {
-        "features": [
-            {"name": "AI Chat", "count": 89, "percentage": 42.5},
-            {"name": "Code Execution", "count": 23, "percentage": 11.0},
-            {"name": "Image Generation", "count": 18, "percentage": 8.6},
-            {"name": "Text Generation", "count": 35, "percentage": 16.7},
-            {"name": "Video Generation", "count": 5, "percentage": 2.4},
-            {"name": "Voice Synthesis", "count": 7, "percentage": 3.3},
-            {"name": "Projects", "count": 32, "percentage": 15.3}
-        ],
-        "total_actions": 209,
-        "period": "all_time"
-    }
+    try:
+        # Check admin privileges
+        if not getattr(current_user, 'is_admin', False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin privileges required"
+            )
 
+        since_date = datetime.utcnow() - timedelta(days=days)
 
-@router.get("/credits-history")
-async def get_credits_history(
-    days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
-    current_user: User = Depends(get_current_user)
+        # Voice session statistics
+        session_stats = db.query(
+            func.count(VoiceSession.id).label('total_sessions'),
+            func.sum(VoiceSession.commands_count).label('total_commands'),
+            func.avg(VoiceSession.transcription_accuracy).label('avg_accuracy'),
+            func.avg(VoiceSession.duration_seconds).label('avg_duration')
+        ).filter(VoiceSession.started_at >= since_date).first()
+
+        commands_per_session = (
+            session_stats.total_commands / session_stats.total_sessions
+            if session_stats.total_sessions and session_stats.total_sessions > 0
+            else 0
+        )
+
+        # Platform usage
+        platform_usage = db.query(
+            VoiceSession.platform,
+            func.count(VoiceSession.id).label('sessions'),
+            func.sum(VoiceSession.commands_count).label('commands'),
+            func.avg(VoiceSession.transcription_accuracy).label('avg_accuracy')
+        ).filter(VoiceSession.started_at >= since_date).group_by(
+            VoiceSession.platform
+        ).order_by(desc('sessions')).all()
+
+        # Hourly usage patterns
+        hourly_usage = db.query(
+            extract('hour', VoiceSession.started_at).label('hour'),
+            func.count(VoiceSession.id).label('sessions')
+        ).filter(VoiceSession.started_at >= since_date).group_by(
+            extract('hour', VoiceSession.started_at)
+        ).order_by('hour').all()
+
+        # Top languages
+        language_usage = db.query(
+            VoiceSession.language,
+            func.count(VoiceSession.id).label('sessions')
+        ).filter(
+            and_(VoiceSession.started_at >= since_date, VoiceSession.language.isnot(None))
+        ).group_by(VoiceSession.language).order_by(desc('sessions')).limit(10).all()
+
+        return VoiceAnalytics(
+            total_sessions=session_stats.total_sessions or 0,
+            total_commands=session_stats.total_commands or 0,
+            average_accuracy=float(session_stats.avg_accuracy) if session_stats.avg_accuracy else None,
+            average_duration=float(session_stats.avg_duration) if session_stats.avg_duration else None,
+            commands_per_session=commands_per_session,
+            platform_usage=[
+                {
+                    "platform": row.platform,
+                    "sessions": row.sessions,
+                    "commands": row.commands or 0,
+                    "avg_accuracy": float(row.avg_accuracy) if row.avg_accuracy else None
+                }
+                for row in platform_usage
+            ],
+            hourly_usage=[
+                {"hour": int(row.hour), "sessions": row.sessions}
+                for row in hourly_usage
+            ],
+            top_languages=[
+                {"language": row.language, "sessions": row.sessions}
+                for row in language_usage
+            ]
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get voice analytics: {str(e)}"
+        )
+
+@router.post("/event", response_model=EventResponse)
+async def track_event(
+    event: EventData,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
-    Get credits usage history.
-    
-    Shows your credit consumption over time with breakdown by feature.
-    Helps track spending and budget effectively.
+    Track a custom analytics event
+
+    - **event_type**: Type of event (click, view, submit, etc.)
+    - **event_data**: Additional structured data
+    - **platform**: Platform where event occurred
+    - **page_url**: Current page URL
     """
-    now = datetime.utcnow()
-    
-    # Generate mock history
-    import random
-    
-    history = []
-    for i in range(days):
-        date = (now - timedelta(days=i)).strftime("%Y-%m-%d")
-        history.append({
-            "date": date,
-            "credits_used": round(random.uniform(0.5, 3.0), 2),
-            "breakdown": {
-                "chat": round(random.uniform(0.1, 1.0), 2),
-                "image": round(random.uniform(0.1, 0.8), 2),
-                "video": round(random.uniform(0, 0.5), 2),
-                "other": round(random.uniform(0, 0.5), 2)
-            }
-        })
-    
-    history.reverse()  # Oldest to newest
-    
-    total_credits_used = sum(h["credits_used"] for h in history)
-    
-    return {
-        "history": history,
-        "total_credits_used": round(total_credits_used, 2),
-        "period_days": days,
-        "average_per_day": round(total_credits_used / days, 2)
-    }
+    try:
+        # Create analytics event
+        analytics_event = AnalyticsEvent(
+            user_id=current_user.id,
+            event_type=event.event_type,
+            event_category="user_interaction",  # Default category
+            event_action=event.event_type,
+            event_data=event.event_data,
+            platform=event.platform,
+            page_url=event.page_url
+        )
 
+        db.add(analytics_event)
+        db.commit()
+        db.refresh(analytics_event)
 
-@router.get("/popular-models")
-async def get_popular_models(
-    current_user: Optional[User] = Depends(get_optional_user)
+        return EventResponse(
+            event_id=str(analytics_event.id),
+            tracked_at=analytics_event.created_at
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to track event: {str(e)}"
+        )
+
+@router.get("/events")
+async def get_events(
+    event_type: Optional[str] = None,
+    platform: Optional[str] = None,
+    limit: int = Query(100, description="Maximum events to return"),
+    offset: int = Query(0, description="Number of events to skip"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
-    Get most popular AI models across the platform.
-    
-    Shows which models are used most frequently by all users.
-    Public endpoint for discovery.
-    """
-    return {
-        "models": [
-            {
-                "model": "claude-3.5-sonnet",
-                "provider": "OpenRouter",
-                "usage_count": 12450,
-                "success_rate": 99.2,
-                "avg_response_time_ms": 1250
-            },
-            {
-                "model": "gpt-4-turbo",
-                "provider": "OpenAI",
-                "usage_count": 8920,
-                "success_rate": 98.7,
-                "avg_response_time_ms": 980
-            },
-            {
-                "model": "llama-3-70b",
-                "provider": "OpenRouter",
-                "usage_count": 5340,
-                "success_rate": 97.5,
-                "avg_response_time_ms": 1450
-            },
-            {
-                "model": "dall-e-3",
-                "provider": "OpenAI",
-                "usage_count": 3210,
-                "success_rate": 99.8,
-                "avg_response_time_ms": 4500
-            },
-            {
-                "model": "stable-diffusion-xl",
-                "provider": "Stability AI",
-                "usage_count": 2890,
-                "success_rate": 98.9,
-                "avg_response_time_ms": 3200
-            }
-        ],
-        "total": 5,
-        "last_updated": datetime.utcnow().isoformat()
-    }
+    Get analytics events with optional filtering
 
+    - **event_type**: Filter by event type
+    - **platform**: Filter by platform
+    - **limit**: Maximum events to return
+    - **offset**: Number of events to skip
+    """
+    try:
+        # Check admin privileges
+        if not getattr(current_user, 'is_admin', False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin privileges required"
+            )
 
-@router.get("/activity-timeline")
-async def get_activity_timeline(
-    limit: int = Query(50, ge=1, le=200, description="Number of activities to return"),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get recent activity timeline.
-    
-    Shows your recent actions chronologically.
-    Useful for reviewing your work history.
-    """
-    # Mock activity timeline
-    import random
-    
-    activities = []
-    activity_types = [
-        "chat_message",
-        "code_execution",
-        "image_generation",
-        "video_generation",
-        "project_created",
-        "project_updated"
-    ]
-    
-    for i in range(min(limit, 50)):
-        activity_type = random.choice(activity_types)
-        timestamp = datetime.utcnow() - timedelta(minutes=i*15)
-        
-        activities.append({
-            "id": i + 1,
-            "type": activity_type,
-            "description": f"Performed {activity_type.replace('_', ' ')}",
-            "timestamp": timestamp.isoformat(),
-            "credits_used": round(random.uniform(0.01, 2.0), 2)
-        })
-    
-    return {
-        "activities": activities,
-        "total": len(activities),
-        "has_more": limit > 50
-    }
+        # Build query
+        query = db.query(AnalyticsEvent)
 
+        if event_type:
+            query = query.filter(AnalyticsEvent.event_type == event_type)
+        if platform:
+            query = query.filter(AnalyticsEvent.platform == platform)
 
-@router.get("/performance")
-async def get_performance_metrics(
-    current_user: Optional[User] = Depends(get_optional_user)
-):
-    """
-    Get API performance metrics.
-    
-    Shows system performance statistics including
-    response times, uptime, and reliability metrics.
-    
-    Public endpoint.
-    """
-    analytics = get_analytics()
-    stats = analytics.get_stats()
-    
-    return {
-        "uptime_percentage": 99.95,
-        "response_times": stats["performance"],
-        "success_rate": stats["requests"]["success_rate"],
-        "active_users": stats["users"]["active"],
-        "requests_per_minute": round(stats["requests"]["total"] / 60, 2),
-        "timestamp": datetime.utcnow().isoformat()
-    }
+        events = query.order_by(desc(AnalyticsEvent.created_at)).limit(limit).offset(offset).all()
 
+        return {
+            "events": [
+                {
+                    "id": str(event.id),
+                    "user_id": str(event.user_id),
+                    "event_type": event.event_type,
+                    "event_data": event.event_data,
+                    "platform": event.platform,
+                    "created_at": event.created_at
+                }
+                for event in events
+            ],
+            "total": len(events)
+        }
 
-@router.get("/export")
-async def export_analytics(
-    format: str = Query("json", description="Export format: json, csv"),
-    period: str = Query("month", description="Time period: week, month, year, all"),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Export analytics data.
-    
-    Download your complete analytics data for external analysis.
-    Supports JSON and CSV formats.
-    """
-    # In production, generate actual export file
-    return {
-        "export_url": f"https://api.galion.app/exports/analytics_{current_user.id}_{period}.{format}",
-        "format": format,
-        "period": period,
-        "generated_at": datetime.utcnow().isoformat(),
-        "expires_at": (datetime.utcnow() + timedelta(hours=24)).isoformat(),
-        "message": "Export will be ready shortly. Download from the provided URL."
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get events: {str(e)}"
+        )
+
+# Import required models
+try:
+    from ..models.beta_user import BetaUser
+except ImportError:
+    # Fallback for when beta user model is not available
+    class BetaUser:
+        id = None
+
+# Fallback auth import
+try:
+    from ..core.auth import get_current_user
+except ImportError:
+    async def get_current_user():
+        raise HTTPException(status_code=501, detail="Authentication not implemented")

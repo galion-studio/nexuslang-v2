@@ -1,0 +1,507 @@
+"""
+Performance monitoring API routes.
+Provides access to system performance metrics, alerts, and monitoring data.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+
+from ..api.auth import get_admin_user
+from ..models.user import User
+from ..services.monitoring.performance_monitor import get_performance_monitor
+
+router = APIRouter()
+
+
+# Request/Response Models
+
+class PerformanceReportRequest(BaseModel):
+    """Request model for performance reports."""
+    time_range: Optional[str] = Field("1h", description="Time range: 1h, 6h, 24h, 7d")
+
+
+class PerformanceReportResponse(BaseModel):
+    """Response model for performance reports."""
+    success: bool
+    report: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+class AlertsResponse(BaseModel):
+    """Response model for performance alerts."""
+    success: bool
+    alerts: List[Dict[str, Any]]
+    total_alerts: int
+    error: Optional[str] = None
+
+
+class MetricsSummaryResponse(BaseModel):
+    """Response model for metrics summary."""
+    success: bool
+    metrics: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+class AlertThresholdUpdate(BaseModel):
+    """Request model for updating alert thresholds."""
+    response_time_p95: Optional[float] = Field(None, ge=0.1, le=60.0)
+    error_rate: Optional[float] = Field(None, ge=0.0, le=100.0)
+    memory_usage: Optional[float] = Field(None, ge=1.0, le=100.0)
+    cpu_usage: Optional[float] = Field(None, ge=1.0, le=100.0)
+    cache_hit_rate: Optional[float] = Field(None, ge=0.0, le=100.0)
+
+
+class ThresholdUpdateResponse(BaseModel):
+    """Response model for threshold updates."""
+    success: bool
+    updated_thresholds: Optional[Dict[str, float]] = None
+    error: Optional[str] = None
+
+
+class HealthStatusResponse(BaseModel):
+    """Response model for system health status."""
+    success: bool
+    health_status: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+# API Endpoints
+
+@router.get("/status", response_model=HealthStatusResponse)
+async def get_monitoring_status():
+    """
+    Get the current status of the performance monitoring system.
+
+    Returns basic health information about the monitoring system.
+    """
+    try:
+        monitor = get_performance_monitor()
+
+        status_info = {
+            "monitoring_active": monitor.monitoring_active,
+            "total_requests": monitor.metrics.total_requests,
+            "active_connections": monitor.metrics.active_connections,
+            "alerts_count": len(monitor.alerts),
+            "last_updated": datetime.utcnow().isoformat()
+        }
+
+        return HealthStatusResponse(success=True, health_status=status_info)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get monitoring status: {str(e)}"
+        )
+
+
+@router.get("/metrics", response_model=MetricsSummaryResponse)
+async def get_performance_metrics(
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Get current performance metrics summary.
+
+    Returns a summary of key performance indicators including response times,
+    error rates, and resource usage.
+    """
+    try:
+        monitor = get_performance_monitor()
+        metrics = monitor.metrics.get_summary()
+
+        return MetricsSummaryResponse(success=True, metrics=metrics)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get performance metrics: {str(e)}"
+        )
+
+
+@router.get("/report", response_model=PerformanceReportResponse)
+async def get_performance_report(
+    time_range: str = Query("1h", description="Time range: 1h, 6h, 24h, 7d"),
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Get a comprehensive performance report.
+
+    Returns detailed analysis of system performance over the specified time range,
+    including trends, alerts, and recommendations.
+    """
+    try:
+        monitor = get_performance_monitor()
+        report = monitor.get_performance_report(time_range)
+
+        return PerformanceReportResponse(success=True, report=report)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate performance report: {str(e)}"
+        )
+
+
+@router.get("/alerts", response_model=AlertsResponse)
+async def get_performance_alerts(
+    severity: Optional[str] = Query(None, description="Filter by severity: error, warning, info"),
+    limit: int = Query(50, ge=1, le=200, description="Maximum number of alerts to return"),
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Get recent performance alerts.
+
+    Returns alerts generated by the monitoring system, optionally filtered by severity.
+    """
+    try:
+        monitor = get_performance_monitor()
+        alerts = monitor.get_alerts(severity=severity, limit=limit)
+
+        return AlertsResponse(
+            success=True,
+            alerts=alerts,
+            total_alerts=len(alerts)
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get performance alerts: {str(e)}"
+        )
+
+
+@router.put("/thresholds", response_model=ThresholdUpdateResponse)
+async def update_alert_thresholds(
+    thresholds: AlertThresholdUpdate,
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Update performance alert thresholds.
+
+    Allows administrators to adjust the thresholds that trigger performance alerts.
+    """
+    try:
+        monitor = get_performance_monitor()
+
+        # Update thresholds
+        updated = {}
+        if thresholds.response_time_p95 is not None:
+            monitor.alert_thresholds['response_time_p95'] = thresholds.response_time_p95
+            updated['response_time_p95'] = thresholds.response_time_p95
+
+        if thresholds.error_rate is not None:
+            monitor.alert_thresholds['error_rate'] = thresholds.error_rate
+            updated['error_rate'] = thresholds.error_rate
+
+        if thresholds.memory_usage is not None:
+            monitor.alert_thresholds['memory_usage'] = thresholds.memory_usage
+            updated['memory_usage'] = thresholds.memory_usage
+
+        if thresholds.cpu_usage is not None:
+            monitor.alert_thresholds['cpu_usage'] = thresholds.cpu_usage
+            updated['cpu_usage'] = thresholds.cpu_usage
+
+        if thresholds.cache_hit_rate is not None:
+            monitor.alert_thresholds['cache_hit_rate'] = thresholds.cache_hit_rate
+            updated['cache_hit_rate'] = thresholds.cache_hit_rate
+
+        return ThresholdUpdateResponse(
+            success=True,
+            updated_thresholds=updated
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update alert thresholds: {str(e)}"
+        )
+
+
+@router.get("/thresholds")
+async def get_alert_thresholds(
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Get current alert threshold settings.
+
+    Returns the current threshold values used for performance alerting.
+    """
+    try:
+        monitor = get_performance_monitor()
+
+        return {
+            "success": True,
+            "thresholds": monitor.alert_thresholds,
+            "last_updated": datetime.utcnow().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get alert thresholds: {str(e)}"
+        )
+
+
+@router.post("/reset")
+async def reset_performance_metrics(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Reset all performance metrics (for testing/debugging).
+
+    Clears all collected metrics and starts fresh monitoring.
+    Use with caution in production.
+    """
+    try:
+        monitor = get_performance_monitor()
+        monitor.reset_metrics()
+
+        return {
+            "success": True,
+            "message": "Performance metrics have been reset",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reset performance metrics: {str(e)}"
+        )
+
+
+@router.get("/export")
+async def export_performance_metrics(
+    format: str = Query("json", description="Export format: json, prometheus"),
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Export current performance metrics.
+
+    Returns metrics in the specified format for external monitoring systems.
+    """
+    try:
+        monitor = get_performance_monitor()
+        exported_data = monitor.export_metrics(format=format)
+
+        if format == "json":
+            return {
+                "success": True,
+                "data": exported_data,
+                "format": "json"
+            }
+        elif format == "prometheus":
+            return {
+                "success": True,
+                "data": exported_data,
+                "format": "prometheus",
+                "content_type": "text/plain; version=0.0.4; charset=utf-8"
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported export format: {format}"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export performance metrics: {str(e)}"
+        )
+
+
+@router.get("/endpoints")
+async def get_endpoint_performance(
+    limit: int = Query(20, ge=1, le=100, description="Number of top endpoints to return"),
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Get performance metrics for individual endpoints.
+
+    Returns detailed performance data for the most used API endpoints.
+    """
+    try:
+        monitor = get_performance_monitor()
+
+        # Get endpoint performance data
+        endpoint_data = []
+        for endpoint, requests in monitor.metrics.endpoint_usage.items():
+            # Calculate response times for this endpoint
+            endpoint_responses = [
+                rt for rt in monitor.metrics.response_times
+                if f"{rt['method']} {rt['endpoint']}" == endpoint
+            ]
+
+            if endpoint_responses:
+                avg_response_time = sum(rt['duration'] for rt in endpoint_responses) / len(endpoint_responses)
+                success_rate = sum(1 for rt in endpoint_responses if 200 <= rt['status_code'] < 400) / len(endpoint_responses) * 100
+
+                endpoint_data.append({
+                    "endpoint": endpoint,
+                    "requests": requests,
+                    "average_response_time": round(avg_response_time, 3),
+                    "success_rate": round(success_rate, 1),
+                    "error_count": sum(1 for rt in endpoint_responses if rt['status_code'] >= 400)
+                })
+
+        # Sort by request count
+        endpoint_data.sort(key=lambda x: x["requests"], reverse=True)
+
+        return {
+            "success": True,
+            "endpoints": endpoint_data[:limit],
+            "total_endpoints": len(endpoint_data)
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get endpoint performance: {str(e)}"
+        )
+
+
+@router.get("/system")
+async def get_system_performance(
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Get system-level performance metrics.
+
+    Returns CPU, memory, and other system resource usage statistics.
+    """
+    try:
+        monitor = get_performance_monitor()
+
+        # Get latest system metrics
+        memory_latest = list(monitor.metrics.memory_usage)[-1] if monitor.metrics.memory_usage else None
+        cpu_latest = list(monitor.metrics.cpu_usage)[-1] if monitor.metrics.cpu_usage else None
+
+        system_metrics = {
+            "memory": memory_latest,
+            "cpu": cpu_latest,
+            "active_connections": monitor.metrics.active_connections,
+            "total_requests": monitor.metrics.total_requests,
+            "uptime": "N/A",  # Would need system start time
+            "last_updated": datetime.utcnow().isoformat()
+        }
+
+        return {
+            "success": True,
+            "system_metrics": system_metrics
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get system performance: {str(e)}"
+        )
+
+
+@router.get("/database")
+async def get_database_performance(
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Get database performance metrics.
+
+    Returns query execution times and database-related performance data.
+    """
+    try:
+        monitor = get_performance_monitor()
+
+        # Analyze database query performance
+        db_queries = list(monitor.metrics.database_query_times)
+
+        if db_queries:
+            query_types = {}
+            for query in db_queries:
+                qtype = query['query_type']
+                if qtype not in query_types:
+                    query_types[qtype] = []
+                query_types[qtype].append(query['duration'])
+
+            # Calculate stats per query type
+            query_stats = {}
+            for qtype, durations in query_types.items():
+                query_stats[qtype] = {
+                    "count": len(durations),
+                    "average_time": sum(durations) / len(durations),
+                    "max_time": max(durations),
+                    "min_time": min(durations)
+                }
+
+            db_metrics = {
+                "total_queries": len(db_queries),
+                "query_types": query_stats,
+                "average_query_time": sum(q['duration'] for q in db_queries) / len(db_queries),
+                "slow_queries": sum(1 for q in db_queries if q['duration'] > 1.0)
+            }
+        else:
+            db_metrics = {
+                "total_queries": 0,
+                "query_types": {},
+                "average_query_time": 0,
+                "slow_queries": 0
+            }
+
+        return {
+            "success": True,
+            "database_metrics": db_metrics
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get database performance: {str(e)}"
+        )
+
+
+@router.get("/cache")
+async def get_cache_performance(
+    current_user: User = Depends(get_admin_user)  # Admin only
+):
+    """
+    Get cache performance metrics.
+
+    Returns cache hit rates and effectiveness statistics.
+    """
+    try:
+        monitor = get_performance_monitor()
+
+        cache_data = list(monitor.metrics.cache_hit_rates)
+
+        if cache_data:
+            avg_hit_rate = sum(cd['hit_rate'] for cd in cache_data) / len(cache_data)
+            total_hits = sum(cd['hits'] for cd in cache_data)
+            total_misses = sum(cd['misses'] for cd in cache_data)
+            total_requests = total_hits + total_misses
+
+            cache_metrics = {
+                "average_hit_rate": avg_hit_rate,
+                "total_cache_requests": total_requests,
+                "total_cache_hits": total_hits,
+                "total_cache_misses": total_misses,
+                "hit_rate_percentage": (total_hits / total_requests * 100) if total_requests > 0 else 0
+            }
+        else:
+            cache_metrics = {
+                "average_hit_rate": 0,
+                "total_cache_requests": 0,
+                "total_cache_hits": 0,
+                "total_cache_misses": 0,
+                "hit_rate_percentage": 0
+            }
+
+        return {
+            "success": True,
+            "cache_metrics": cache_metrics
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get cache performance: {str(e)}"
+        )

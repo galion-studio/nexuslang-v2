@@ -14,6 +14,8 @@ from ..services.ai.ai_router import get_ai_router, AIModel, AIRouter
 from ..api.auth import get_current_user
 from ..core.database import get_db
 from ..models.user import User
+from ..services.grokopedia.search import get_search_engine
+from ..ai.rag.rag_system import RAGSystem
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -40,6 +42,39 @@ class ChatResponse(BaseModel):
     provider: str = Field(..., description="Provider (openrouter/openai)")
     usage: Dict = Field(..., description="Token usage statistics")
     credits_used: float = Field(..., description="Credits deducted")
+
+
+class DeepSearchRequest(BaseModel):
+    """Deep search request combining RAG and AI chat."""
+    messages: List[ChatMessage] = Field(..., description="Conversation history")
+    search_query: Optional[str] = Field(None, description="Specific search query (defaults to last user message)")
+    model: Optional[str] = Field(AIModel.CLAUDE_SONNET, description="Model to use")
+    temperature: Optional[float] = Field(0.7, ge=0, le=1, description="Sampling temperature")
+    max_tokens: Optional[int] = Field(1000, ge=1, le=4000, description="Max tokens to generate")
+    search_limit: Optional[int] = Field(5, ge=1, le=20, description="Max search results to include")
+    include_sources: Optional[bool] = Field(True, description="Include source documents in response")
+
+
+class SearchResult(BaseModel):
+    """Individual search result from knowledge base."""
+    document_id: str = Field(..., description="Document ID")
+    title: str = Field(..., description="Document title")
+    content: str = Field(..., description="Document content preview")
+    score: float = Field(..., description="Relevance score")
+    source: str = Field(..., description="Source of the document")
+    highlights: List[str] = Field(default_factory=list, description="Highlighted text snippets")
+
+
+class DeepSearchResponse(BaseModel):
+    """Deep search response with RAG-enhanced AI chat."""
+    content: str = Field(..., description="Generated response")
+    search_results: List[SearchResult] = Field(default_factory=list, description="Knowledge base search results")
+    model: str = Field(..., description="Model used")
+    provider: str = Field(..., description="Provider (openrouter/openai)")
+    usage: Dict = Field(..., description="Token usage statistics")
+    credits_used: float = Field(..., description="Credits deducted")
+    search_performed: bool = Field(..., description="Whether knowledge base search was performed")
+    confidence_score: float = Field(..., description="Confidence in the response")
 
 
 class CodeGenerationRequest(BaseModel):
@@ -141,10 +176,154 @@ async def chat_completion(
     
     except HTTPException:
         raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"AI request failed: {str(e)}"
+            )
+
+
+@router.post("/deep-search", response_model=DeepSearchResponse)
+async def deep_search_chat(
+    request: DeepSearchRequest,
+    current_user: User = Depends(get_current_user),
+    ai: AIRouter = Depends(get_ai_router),
+    db: Session = Depends(get_db)
+):
+    """
+    AI chat with deep search capabilities using RAG (Retrieval-Augmented Generation).
+
+    Combines knowledge base search with AI chat to provide more accurate, contextually-rich responses.
+    Uses the existing knowledge base and RAG system for intelligent search and response generation.
+
+    Costs: ~0.02 credits per 1k tokens (includes search overhead)
+    """
+    try:
+        # Initialize RAG system
+        rag_config = {
+            'redis_host': 'localhost',
+            'redis_port': 6379,
+            'elasticsearch_url': 'http://localhost:9200',
+            'openai_api_key': None,  # Will use environment variables
+            'anthropic_api_key': None,
+            'generation_models': {}
+        }
+        rag_system = RAGSystem(rag_config)
+
+        # Extract search query (use last user message if not provided)
+        search_query = request.search_query
+        if not search_query:
+            # Find the last user message
+            for msg in reversed(request.messages):
+                if msg.role == 'user':
+                    search_query = msg.content
+                    break
+
+        search_results = []
+        search_performed = False
+        context_docs = []
+
+        # Perform knowledge base search if we have a query
+        if search_query and len(search_query.strip()) > 0:
+            try:
+                # Use RAG system to search knowledge base
+                rag_response = await rag_system.query(search_query)
+                search_performed = True
+
+                # Convert RAG search results to our format
+                for result in rag_response.sources[:request.search_limit]:
+                    search_results.append(SearchResult(
+                        document_id=result.document.id,
+                        title=result.document.title,
+                        content=result.document.content[:500] + "..." if len(result.document.content) > 500 else result.document.content,
+                        score=result.score,
+                        source=result.document.source,
+                        highlights=result.highlights
+                    ))
+
+                # Prepare context for AI generation
+                if request.include_sources:
+                    context_docs = [f"Source: {result.document.title}\n{result.document.content}" for result in rag_response.sources[:3]]
+
+            except Exception as search_error:
+                # Log search error but continue with regular chat
+                print(f"Deep search failed: {search_error}")
+                search_performed = False
+
+        # Prepare enhanced prompt with search context
+        enhanced_messages = request.messages.copy()
+
+        if context_docs and search_performed:
+            # Add search context to system message or create one
+            context_text = "\n\n".join(context_docs)
+            search_context = f"\n\nRelevant information from knowledge base:\n{context_text}\n\nUse this information to provide a more accurate and helpful response."
+
+            # Find system message or add one
+            system_found = False
+            for msg in enhanced_messages:
+                if msg.role == 'system':
+                    msg.content += search_context
+                    system_found = True
+                    break
+
+            if not system_found:
+                enhanced_messages.insert(0, ChatMessage(
+                    role='system',
+                    content=f"You have access to relevant information from the knowledge base.{search_context}"
+                ))
+
+        # Convert messages to dict format
+        messages = [{"role": msg.role, "content": msg.content} for msg in enhanced_messages]
+
+        # Generate AI response
+        result = await ai.chat_completion(
+            messages=messages,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens
+        )
+
+        # Calculate credits (higher cost for deep search due to RAG overhead)
+        from ..services.billing.credit_service import get_credit_service
+        credit_service = get_credit_service(db)
+
+        credits_used = credit_service.calculate_ai_cost(
+            "deep_search",
+            tokens=result["usage"].get("total_tokens", 0)
+        )
+
+        # Deduct credits
+        if not credit_service.deduct_credits(current_user.id, credits_used, "ai_deep_search", f"Deep Search AI: {result['model']}"):
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail={
+                    "error": "Insufficient credits",
+                    "required": credits_used,
+                    "available": credit_service.get_credit_balance(current_user.id)["current_balance"],
+                    "message": f"Need {credits_used:.2f} credits, have {credit_service.get_credit_balance(current_user.id)['current_balance']:.2f}"
+                }
+            )
+
+        # Calculate confidence score (simplified)
+        confidence_score = 0.8 if search_performed else 0.6  # Higher confidence with search
+
+        return DeepSearchResponse(
+            content=result["content"],
+            search_results=search_results,
+            model=result["model"],
+            provider=result["provider"],
+            usage=result["usage"],
+            credits_used=credits_used,
+            search_performed=search_performed,
+            confidence_score=confidence_score
+        )
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"AI request failed: {str(e)}"
+            detail=f"Deep search failed: {str(e)}"
         )
 
 

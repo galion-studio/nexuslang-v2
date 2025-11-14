@@ -1,0 +1,66 @@
+{
+  "summary": {
+    "total_tests": 9,
+    "passed": 0,
+    "failed": 9,
+    "total_time": 0.31559085845947266,
+    "success_rate": 0.0
+  },
+  "results": {
+    "API Imports": {
+      "status": "FAIL",
+      "message": "Import failed: No module named 'fastapi'",
+      "duration": 0.0021774768829345703,
+      "timestamp": 1763140501.1822562
+    },
+    "Docker Build Validation": {
+      "status": "FAIL",
+      "message": "Docker build failed: unknown flag: --dry-run\n\nUsage:  docker buildx build [OPTIONS] PATH | URL | -\n\nRun 'docker buildx build --help' for more information\n",
+      "duration": 0.15606021881103516,
+      "timestamp": 1763140501.3383164
+    },
+    "Requirements Validation": {
+      "status": "FAIL",
+      "message": "Requirements check failed: C:\\Program Files\\LibreOffice\\program\\python-core-3.10.18\\bin\\python.exe: No module named pip\n",
+      "duration": 0.08571219444274902,
+      "timestamp": 1763140501.4240286
+    },
+    "Agent Orchestration": {
+      "status": "FAIL",
+      "message": "Agent orchestration test failed: No module named 'pydantic'",
+      "duration": 0.03220081329345703,
+      "timestamp": 1763140501.4562294
+    },
+    "Scientific Agents": {
+      "status": "FAIL",
+      "message": "Scientific agents test failed: No module named 'pydantic'",
+      "duration": 0.013407707214355469,
+      "timestamp": 1763140501.4696372
+    },
+    "Transparency Service": {
+      "status": "FAIL",
+      "message": "Transparency service test failed: No module named 'pydantic'",
+      "duration": 0.012036800384521484,
+      "timestamp": 1763140501.481674
+    },
+    "SDK Functionality": {
+      "status": "FAIL",
+      "message": "Exception: invalid syntax (scientific_sdk.py, line 767)",
+      "duration": 0.005503177642822266,
+      "timestamp": 1763140501.4871771
+    },
+    "Example Applications": {
+      "status": "FAIL",
+      "message": "Exception: invalid syntax (scientific_sdk.py, line 767)",
+      "duration": 0.005389690399169922,
+      "timestamp": 1763140501.4925668
+    },
+    "Performance Benchmarks": {
+      "status": "FAIL",
+      "message": "Performance benchmark failed: No module named 'psutil'",
+      "duration": 0.0020987987518310547,
+      "timestamp": 1763140501.4946656
+    }
+  },
+  "timestamp": 1763140501.4956696
+}

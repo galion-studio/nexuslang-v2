@@ -1,0 +1,414 @@
+# NexusLang v2 GPU-Optimized Deployment for RunPod
+# Production-ready configuration with GPU acceleration for AI workloads
+
+version: '3.8'
+
+networks:
+  nexus-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  elasticsearch-data:
+  # GPU-optimized volumes
+  models-cache:
+  datasets-cache:
+
+services:
+  # ==================== GPU-ACCELERATED BACKEND ====================
+
+  backend:
+    build:
+      context: ./v2/backend
+      dockerfile: Dockerfile.gpu  # GPU-optimized Dockerfile
+      args:
+        CUDA_VERSION: 12.1
+        CUDNN_VERSION: 8
+        PYTHON_VERSION: 3.12
+    container_name: nexus-backend-gpu
+    restart: unless-stopped
+    environment:
+      # GPU Configuration
+      CUDA_VISIBLE_DEVICES: all
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility,video
+      TORCH_USE_CUDA_DSA: 1
+
+      # AI/ML Optimization
+      PYTORCH_CUDA_ALLOC_CONF: max_split_size_mb:512
+      CUDA_LAUNCH_BLOCKING: 0
+      OMP_NUM_THREADS: 8
+      MKL_NUM_THREADS: 8
+      NUMEXPR_NUM_THREADS: 8
+
+      # Memory Management
+      PYTORCH_MPS_HIGH_WATERMARK_RATIO: 0.0
+      CUDA_CACHE_DISABLE: 0
+
+      # Database - Use dedicated ports
+      DATABASE_URL: postgresql://nexus:dev_password_2025@postgres:5432/galion_platform
+      REDIS_URL: redis://:dev_redis_2025@redis:6379/0
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+
+      # Security
+      SECRET_KEY: dev_secret_key_64_chars_minimum_for_production_use_only
+      JWT_SECRET: dev_jwt_secret_64_chars_minimum_for_production_use_only
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRATION_HOURS: 24
+
+      # Application
+      APP_NAME: "NexusLang v2 GPU API"
+      DEBUG: false
+      LOG_LEVEL: INFO
+
+      # CORS - Allow all for development
+      CORS_ORIGINS: '["*"]'
+
+      # AI Services (GPU-optimized)
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENAI_API_BASE: https://openrouter.ai/api/v1
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+      # GPU-specific settings
+      GPU_MEMORY_FRACTION: 0.8
+      GPU_ALLOW_GROWTH: true
+      GPU_PER_PROCESS_MEMORY_FRACTION: 0.8
+
+      # Environment
+      ENVIRONMENT: production-gpu
+    volumes:
+      - ./v2/backend:/app
+      - ./v2/nexuslang:/app/nexuslang
+      - models-cache:/app/models
+      - datasets-cache:/app/datasets
+    ports:
+      - "8010:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    command: python -m start
+    networks:
+      - nexus-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==================== AI MODEL SERVING ====================
+
+  ai-models:
+    build:
+      context: ./v2/backend
+      dockerfile: Dockerfile.models  # Dedicated model serving
+      args:
+        CUDA_VERSION: 12.1
+        PYTHON_VERSION: 3.12
+    container_name: nexus-ai-models
+    restart: unless-stopped
+    environment:
+      CUDA_VISIBLE_DEVICES: all
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility,video
+
+      # Model serving configuration
+      MODEL_CACHE_DIR: /app/models
+      MAX_MODEL_MEMORY: 8GB
+      MODEL_PRELOAD_STRATEGY: on_demand
+
+      # GPU optimization
+      GPU_MEMORY_FRACTION: 0.9
+      GPU_ALLOW_GROWTH: true
+      BATCH_SIZE: 4
+      MAX_SEQUENCE_LENGTH: 2048
+
+    volumes:
+      - models-cache:/app/models
+      - datasets-cache:/app/datasets
+    ports:
+      - "8011:8001"
+    depends_on:
+      - backend
+    networks:
+      - nexus-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+
+  # ==================== GPU MONITORING ====================
+
+  gpu-monitor:
+    image: nvidia/cuda:12.1-base-ubuntu22.04
+    container_name: nexus-gpu-monitor
+    restart: unless-stopped
+    command: >
+      bash -c "
+        while true; do
+          echo '=== GPU Status ===';
+          nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu,utilization.memory,temperature.gpu --format=csv,noheader,nounits;
+          echo '=== GPU Processes ===';
+          nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader;
+          sleep 30;
+        done
+      "
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - nexus-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # ==================== DATABASE (UNCHANGED) ====================
+
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: nexus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: dev_password_2025
+      POSTGRES_DB: galion_platform
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # GPU-optimized PostgreSQL settings
+      PG_WORK_MEM: 64MB
+      PG_MAINTENANCE_WORK_MEM: 256MB
+      PG_SHARED_BUFFERS: 1GB
+      PG_EFFECTIVE_CACHE_SIZE: 3GB
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus-network
+
+  # ==================== CACHE (GPU-OPTIMIZED) ====================
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass dev_redis_2025
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --tcp-keepalive 60
+      --maxclients 10000
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - nexus-network
+
+  # ==================== SEARCH (GPU-ACCELERATED) ====================
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: nexus-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms2g -Xmx4g"  # Increased for GPU workloads
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      # GPU-optimized settings
+      - "ES_THREAD_POOL_WRITE_SIZE=8"
+      - "ES_THREAD_POOL_SEARCH_SIZE=16"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9201:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - nexus-network
+
+  # ==================== FRONTEND (UNCHANGED) ====================
+
+  frontend:
+    build:
+      context: ./v2/frontend
+      dockerfile: Dockerfile.dev
+    container_name: nexus-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000
+      NEXT_PUBLIC_WS_URL: ws://backend:8000
+      NEXT_TELEMETRY_DISABLED: 1
+      PORT: 3000
+    volumes:
+      - ./v2/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3010:3000"
+    depends_on:
+      - backend
+    command: npm run dev
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== MONITORING (ENHANCED) ====================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: nexus-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./v2/infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./v2/infrastructure/prometheus/gpu-monitoring.yml:/etc/prometheus/gpu-monitoring.yml
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - nexus-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nexus-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: false
+      # GPU monitoring dashboards
+      GF_INSTALL_PLUGINS: grafana-piechart-panel,grafana-worldmap-panel,natel-plotly-panel
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - nexus-network
+
+  # ==================== MONITORING DASHBOARD (ENHANCED) ====================
+
+  monitoring:
+    build:
+      context: ./monitoring
+      dockerfile: Dockerfile
+    container_name: nexus-monitoring
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: production-gpu
+      PORT: 8080
+      # GPU monitoring
+      GPU_MONITORING_ENABLED: true
+      GPU_METRICS_ENDPOINT: http://gpu-monitor:8081/metrics
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+      - frontend
+      - postgres
+      - redis
+      - elasticsearch
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== GPU LOAD BALANCER ====================
+
+  gpu-load-balancer:
+    image: nginx:alpine
+    container_name: nexus-gpu-lb
+    restart: unless-stopped
+    volumes:
+      - ./nginx.gpu.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"  # GPU-optimized endpoints
+    depends_on:
+      - backend
+      - ai-models
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== REVERSE PROXY (GPU-AWARE) ====================
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
+    container_name: nexus-nginx-gpu
+    restart: unless-stopped
+    environment:
+      # GPU-aware proxy settings
+      UPSTREAM_BACKEND: backend:8000
+      UPSTREAM_AI_MODELS: ai-models:8001
+      UPSTREAM_FRONTEND: frontend:3000
+      UPSTREAM_MONITORING: monitoring:8080
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      - frontend
+      - monitoring
+      - ai-models
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

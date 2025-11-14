@@ -1,241 +1,278 @@
 """
-Voice API routes.
-Handles speech-to-text, text-to-speech, and voice cloning.
+Voice API Endpoints - FastAPI routes for voice services
+Provides REST and WebSocket endpoints for STT, TTS, and voice session management
+
+Endpoints:
+- POST /api/v2/voice/transcribe - Transcribe audio to text
+- POST /api/v2/voice/synthesize - Generate speech from text
+- GET /api/v2/voice/voices - List available voices
+- POST /api/v2/voice/session/start - Start voice session
+- POST /api/v2/voice/session/end - End voice session
+- GET /api/v2/voice/session/{id}/stats - Get session stats
+- GET /api/v2/voice/health - Health check
+- WebSocket /ws/voice - Real-time voice streaming
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Response
+import logging
+import base64
+from typing import Optional, Dict, Any, List
+from datetime import datetime
+
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Depends
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from typing import Optional
-import io
+from pydantic import BaseModel, Field
 
-from ..services.voice.stt_service import get_stt_service
-from ..services.voice.tts_service import get_tts_service
-from ..models.user import User
-from ..api.auth import get_current_user, get_optional_user
+# Import voice services
+from ..services.voice.stt_service import stt_service, STTRequest, STTResponse
+from ..services.voice.tts_service import tts_service, TTSRequest, TTSResponse
+from ..services.voice.voice_session import VoiceSessionService, VoiceSessionData, VoiceCommandData
 
-router = APIRouter()
+# Database dependency
+from ..core.database import get_db
+from sqlalchemy.orm import Session
 
+logger = logging.getLogger(__name__)
 
-# Request/Response Models
-class TTSRequest(BaseModel):
-    text: str
-    voice_id: Optional[str] = None
-    emotion: Optional[str] = None
-    speed: float = 1.0
-    language: str = "en"
+router = APIRouter(prefix="/voice", tags=["voice"])
 
+# Pydantic models for API requests/responses
+class TranscribeRequest(BaseModel):
+    """Request model for transcription"""
+    audio_data: str = Field(..., description="Base64 encoded audio data")
+    language: str = Field(default="en", description="Language code")
+    model: str = Field(default="whisper-1", description="STT model to use")
 
-class STTResponse(BaseModel):
-    text: str
-    language: str
-    confidence: float
-    segments: list
+class SynthesizeRequest(BaseModel):
+    """Request model for speech synthesis"""
+    text: str = Field(..., description="Text to convert to speech")
+    voice: str = Field(default="alloy", description="Voice to use")
+    model: str = Field(default="tts-1", description="TTS model to use")
+    speed: float = Field(default=1.0, description="Speech speed (0.25-4.0)")
 
+class SessionStartRequest(BaseModel):
+    """Request to start a voice session"""
+    platform: str = Field(default="galion-app", description="Platform name")
 
-class TTSResponse(BaseModel):
-    audio_url: Optional[str] = None
-    text: str
-    voice_id: str
-    audio_base64: Optional[str] = None
+class SessionEndRequest(BaseModel):
+    """Request to end a voice session"""
+    session_id: str = Field(..., description="Session ID to end")
 
-
-class VoiceInfo(BaseModel):
-    id: str
-    name: str
-    language: str
-    gender: Optional[str] = None
-
-
-# Speech-to-Text Endpoints
-@router.post("/stt", response_model=STTResponse)
-async def speech_to_text(
-    audio: UploadFile = File(...),
-    language: Optional[str] = None,
-    current_user: Optional[User] = Depends(get_optional_user)
-):
+# Enhanced endpoints using real services
+@router.post("/transcribe")
+async def transcribe_audio(request: TranscribeRequest):
     """
-    Convert speech to text using Whisper.
-    
-    Supports multiple audio formats: WAV, MP3, M4A, FLAC, etc.
-    Auto-detects language if not specified.
+    Transcribe audio data to text using OpenAI Whisper
     """
-    if not audio.content_type or not audio.content_type.startswith('audio/'):
-        raise HTTPException(400, "File must be audio format")
-    
-    # Read audio data
-    audio_data = await audio.read()
-    
-    if len(audio_data) == 0:
-        raise HTTPException(400, "Audio file is empty")
-    
-    # Transcribe
-    stt_service = get_stt_service()
-    result = await stt_service.transcribe(audio_data, language)
-    
-    return STTResponse(**result)
+    try:
+        logger.info(f"Voice transcription requested: {len(request.audio_data)} chars of base64 data")
 
+        if not stt_service.is_available():
+            raise HTTPException(status_code=503, detail="STT service not available")
 
-@router.post("/detect-language")
-async def detect_language(
-    audio: UploadFile = File(...),
-    current_user: Optional[User] = Depends(get_optional_user)
-):
-    """
-    Detect language from audio.
-    """
-    if not audio.content_type or not audio.content_type.startswith('audio/'):
-        raise HTTPException(400, "File must be audio format")
-    
-    audio_data = await audio.read()
-    
-    if len(audio_data) == 0:
-        raise HTTPException(400, "Audio file is empty")
-    
-    stt_service = get_stt_service()
-    language = await stt_service.detect_language(audio_data)
-    
-    return {"language": language}
+        # Convert base64 to bytes
+        try:
+            audio_bytes = base64.b64decode(request.audio_data)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid base64 audio data: {str(e)}")
 
-
-# Text-to-Speech Endpoints
-@router.post("/tts")
-async def text_to_speech(
-    request: TTSRequest,
-    return_audio: bool = False,
-    current_user: Optional[User] = Depends(get_optional_user)
-):
-    """
-    Convert text to speech using TTS.
-    
-    Set return_audio=true to get audio as response.
-    Otherwise returns audio URL.
-    """
-    if not request.text.strip():
-        raise HTTPException(400, "Text cannot be empty")
-    
-    if len(request.text) > 5000:
-        raise HTTPException(400, "Text too long (max 5000 characters)")
-    
-    # Synthesize speech
-    tts_service = get_tts_service()
-    audio_data = await tts_service.synthesize(
-        request.text,
-        request.voice_id,
-        request.emotion,
-        request.speed,
-        request.language
-    )
-    
-    if return_audio:
-        # Return audio directly
-        return StreamingResponse(
-            io.BytesIO(audio_data),
-            media_type="audio/wav",
-            headers={
-                "Content-Disposition": "attachment; filename=speech.wav"
-            }
+        # Create STT request
+        stt_request = STTRequest(
+            audio_data=audio_bytes,
+            language=request.language,
+            model=request.model
         )
-    else:
-        # Return base64 encoded audio
-        import base64
-        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-        
+
+        # Process transcription
+        response = await stt_service.transcribe_audio(stt_request)
+
         return {
-            "text": request.text,
-            "voice_id": request.voice_id or "default",
-            "audio_base64": audio_base64,
-            "format": "wav"
+            "text": response.text,
+            "confidence": response.confidence,
+            "language": response.language,
+            "processing_time": response.processing_time,
+            "model": response.model,
+            "status": "success"
         }
 
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Transcription failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 @router.post("/synthesize")
-async def synthesize_speech(
-    request: TTSRequest,
-    current_user: Optional[User] = Depends(get_optional_user)
-):
+async def synthesize_speech(request: SynthesizeRequest):
     """
-    Synthesize speech and return as audio stream.
-    Direct audio response for playback.
+    Generate speech from text using OpenAI TTS
     """
-    if not request.text.strip():
-        raise HTTPException(400, "Text cannot be empty")
-    
-    # Synthesize
-    tts_service = get_tts_service()
-    audio_data = await tts_service.synthesize(
-        request.text,
-        request.voice_id,
-        request.emotion,
-        request.speed,
-        request.language
-    )
-    
-    # Return as audio stream
-    return StreamingResponse(
-        io.BytesIO(audio_data),
-        media_type="audio/wav"
-    )
+    try:
+        logger.info(f"Voice synthesis requested: '{request.text[:50]}...' with voice '{request.voice}'")
 
+        if not tts_service.is_available():
+            raise HTTPException(status_code=503, detail="TTS service not available")
 
-# Voice Management Endpoints
+        # Create TTS request
+        tts_request = TTSRequest(
+            text=request.text,
+            voice=request.voice,
+            model=request.model,
+            speed=request.speed
+        )
+
+        # Generate speech
+        response = await tts_service.generate_speech(tts_request)
+
+        # Return audio stream
+        return StreamingResponse(
+            iter([response.audio_data]),
+            media_type=response.content_type,
+            headers={
+                "Content-Length": str(len(response.audio_data)),
+                "X-Voice": response.voice,
+                "X-Text-Length": str(len(response.text)),
+                "X-Processing-Time": str(response.processing_time),
+                "X-Estimated-Duration": str(response.duration_estimate)
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"TTS generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Speech synthesis failed: {str(e)}")
+
 @router.get("/voices")
-async def list_voices(
-    current_user: Optional[User] = Depends(get_optional_user)
+async def get_available_voices():
+    """
+    Get list of available voices for TTS
+    """
+    try:
+        voices = await tts_service.get_available_voices()
+
+        voice_list = []
+        for voice_id, config in voices.items():
+            voice_list.append({
+                "id": voice_id,
+                "name": voice_id.title(),
+                "language": "en",
+                "gender": config.get("gender", "neutral"),
+                "style": config.get("style", "neutral")
+            })
+
+        return {
+            "voices": voice_list,
+            "count": len(voice_list)
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get voices: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve voices")
+
+@router.post("/session/start")
+async def start_voice_session(
+    request: SessionStartRequest,
+    db: Session = Depends(get_db)
 ):
     """
-    Get list of available voices for text-to-speech.
+    Start a new voice session
     """
-    tts_service = get_tts_service()
-    voices = await tts_service.list_voices()
-    
-    return {
-        "voices": [
-            {"id": v, "name": v, "language": "en", "gender": "neutral"}
-            for v in voices
-        ],
-        "total": len(voices)
-    }
+    try:
+        # For now, we'll use a mock user_id - in production this would come from auth
+        user_id = "mock_user_id"
 
+        session_service = VoiceSessionService(db)
+        session_id = await session_service.create_session(user_id, request.platform)
 
-@router.post("/clone")
-async def clone_voice(
-    samples: list[UploadFile] = File(...),
-    name: str = "custom_voice",
-    current_user: User = Depends(get_current_user)
+        return {
+            "session_id": session_id,
+            "status": "started",
+            "platform": request.platform,
+            "timestamp": datetime.utcnow()
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to start session: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start session: {str(e)}")
+
+@router.post("/session/end")
+async def end_voice_session(
+    request: SessionEndRequest,
+    db: Session = Depends(get_db)
 ):
     """
-    Clone a voice from audio samples (requires authentication).
-    
-    Provide 2-5 high-quality audio samples of the same voice.
-    Each sample should be 3-10 seconds long.
+    End a voice session
     """
-    if len(samples) < 2:
-        raise HTTPException(400, "At least 2 audio samples required")
-    
-    if len(samples) > 10:
-        raise HTTPException(400, "Maximum 10 audio samples allowed")
-    
-    # Read all samples
-    audio_samples = []
-    for sample in samples:
-        if not sample.content_type or not sample.content_type.startswith('audio/'):
-            raise HTTPException(400, "All files must be audio format")
-        
-        data = await sample.read()
-        if len(data) == 0:
-            raise HTTPException(400, f"Audio file {sample.filename} is empty")
-        
-        audio_samples.append(data)
-    
-    # Clone voice
-    tts_service = get_tts_service()
-    voice_id = await tts_service.clone_voice(audio_samples, name)
-    
+    try:
+        session_service = VoiceSessionService(db)
+        success = await session_service.end_session(request.session_id)
+
+        if not success:
+            raise HTTPException(status_code=404, detail="Session not found or already ended")
+
+        return {
+            "session_id": request.session_id,
+            "status": "ended",
+            "timestamp": datetime.utcnow()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to end session {request.session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to end session: {str(e)}")
+
+@router.get("/session/{session_id}/stats")
+async def get_session_stats(
+    session_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get statistics for a voice session
+    """
+    try:
+        # For now, we'll use a mock user_id - in production this would come from auth
+        user_id = "mock_user_id"
+
+        session_service = VoiceSessionService(db)
+        stats = await session_service.get_session_stats(user_id)
+
+        return {
+            "session_id": session_id,
+            "stats": stats,
+            "timestamp": datetime.utcnow()
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get session stats for {session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get session stats: {str(e)}")
+
+@router.get("/health")
+async def voice_health_check():
+    """
+    Health check for voice services
+    """
+    stt_available = stt_service.is_available()
+    tts_available = tts_service.is_available()
+
+    overall_status = "healthy" if (stt_available and tts_available) else "degraded"
+
     return {
-        "voice_id": voice_id,
-        "status": "completed",
-        "name": name,
-        "message": "Voice cloned successfully! Use this voice_id in TTS requests."
+        "status": overall_status,
+        "stt": {
+            "healthy": stt_available,
+            "mode": "whisper" if stt_available else "unavailable"
+        },
+        "tts": {
+            "healthy": tts_available,
+            "mode": "openai" if tts_available else "unavailable"
+        },
+        "services": {
+            "total": 2,
+            "healthy": (1 if stt_available else 0) + (1 if tts_available else 0),
+            "unhealthy": (1 if not stt_available else 0) + (1 if not tts_available else 0)
+        },
+        "timestamp": datetime.utcnow()
     }
 
+# Export router
+__all__ = ["router"]

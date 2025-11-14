@@ -30,8 +30,21 @@ from .core.performance import performance_middleware, setup_db_monitoring
 from .core.monitoring import monitoring_middleware, get_monitoring_system
 from .core.backup import get_backup_manager
 
-# Import routers
-from .api import auth, ai, nexuslang, billing, video, projects, teams, analytics, grokopedia, marketing, errors, rbac, mail, workplace
+# Import routers individually
+from .api.auth import router as auth_router
+from .api.ai import router as ai_router
+from .api.nexuslang import router as nexuslang_router
+from .api.billing import router as billing_router
+from .api.video import router as video_router
+from .api.projects import router as projects_router
+from .api.teams import router as teams_router
+from .api.analytics import router as analytics_router
+from .api.grokopedia import router as grokopedia_router
+from .api.marketing import router as marketing_router
+from .api.errors import router as errors_router
+from .api.rbac import router as rbac_router
+from .api.mail import router as mail_router
+from .api.workplace import router as workplace_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -94,20 +107,20 @@ async def health_check():
 
 
 # Include routers
-app.include_router(auth.router, prefix="/api/v2/auth", tags=["Authentication"])
-app.include_router(ai.router, prefix="/api/v2", tags=["AI"])
-app.include_router(nexuslang.router, prefix="/api/v2", tags=["NexusLang"])
-app.include_router(billing.router, prefix="/api/v2/billing", tags=["Billing"])
-app.include_router(video.router, prefix="/api/v2/video", tags=["Video"])
-app.include_router(projects.router, prefix="/api/v2/projects", tags=["Projects"])
-app.include_router(teams.router, prefix="/api/v2/teams", tags=["Teams"])
-app.include_router(analytics.router, prefix="/api/v2/analytics", tags=["Analytics"])
-app.include_router(grokopedia.router, prefix="/api/v2", tags=["Grokopedia"])
-app.include_router(marketing.router, prefix="/api/v2", tags=["Marketing"])
-app.include_router(errors.router, prefix="/api/v2", tags=["Errors"])
-app.include_router(rbac.router, prefix="/api/v2", tags=["RBAC"])
-app.include_router(mail.router, prefix="/api/v2", tags=["Mail Integration"])
-app.include_router(workplace.router, prefix="/api/v1", tags=["Workplace Service"])
+app.include_router(auth_router, prefix="/api/v2/auth", tags=["Authentication"])
+app.include_router(ai_router, prefix="/api/v2", tags=["AI"])
+app.include_router(nexuslang_router, prefix="/api/v2", tags=["NexusLang"])
+app.include_router(billing_router, prefix="/api/v2/billing", tags=["Billing"])
+app.include_router(video_router, prefix="/api/v2/video", tags=["Video"])
+app.include_router(projects_router, prefix="/api/v2/projects", tags=["Projects"])
+app.include_router(teams_router, prefix="/api/v2/teams", tags=["Teams"])
+app.include_router(analytics_router, prefix="/api/v2/analytics", tags=["Analytics"])
+app.include_router(grokopedia_router, prefix="/api/v2", tags=["Grokopedia"])
+app.include_router(marketing_router, prefix="/api/v2", tags=["Marketing"])
+app.include_router(errors_router, prefix="/api/v2", tags=["Errors"])
+app.include_router(rbac_router, prefix="/api/v2", tags=["RBAC"])
+app.include_router(mail_router, prefix="/api/v2", tags=["Mail Integration"])
+app.include_router(workplace_router, prefix="/api/v1", tags=["Workplace Service"])
 
 
 # WebSocket endpoint for real-time features

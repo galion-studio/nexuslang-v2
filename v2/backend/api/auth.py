@@ -14,16 +14,18 @@ Endpoints:
 - POST /reset-password - Reset password with token
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from datetime import datetime
 
-from ..services.auth.auth_service import get_auth_service, AuthService
+# First principles: Use absolute imports
 from ..core.database import get_db
-from ..models.user import User
+from ..models.user import User, UserResponse
+from ..core.config import settings
+from ..services.auth.auth_service import get_auth_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
@@ -55,19 +57,19 @@ class TokenResponse(BaseModel):
 
 class UserResponse(BaseModel):
     """User profile response."""
-    id: int
+    id: str
     email: str
     username: str
     full_name: Optional[str]
     avatar_url: Optional[str]
     bio: Optional[str]
     website: Optional[str]
+    is_active: bool
     is_verified: bool
-    is_admin: bool
     subscription_tier: str
-    subscription_status: str
     credits: float
     created_at: str
+    updated_at: Optional[str]
     last_login: Optional[str]
 
 
@@ -98,42 +100,34 @@ class PasswordReset(BaseModel):
 # Dependency to get current user from token
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> User:
     """
     Get current user from JWT token.
-    
+
     Raises:
         HTTPException: If token is invalid or user not found
     """
     token = credentials.credentials
-    
+
     try:
-        payload = decode_token(token)
-        email = payload.get("sub")
-        
-        if email is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload"
-            )
-        
-        user = db.query(User).filter(User.email == email).first()
-        
+        auth_service = get_auth_service(db)
+        user = await auth_service.get_current_user(token)
+
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found"
+                detail="Invalid token or user not found"
             )
-        
+
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is disabled"
             )
-        
+
         return user
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -146,29 +140,27 @@ async def get_current_user(
 # Optional: Get current user but allow None
 async def get_current_user_optional(
     authorization: Optional[str] = Header(None),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Optional[User]:
     """Get current user if token provided, otherwise None."""
     if not authorization or not authorization.startswith("Bearer "):
         return None
-    
+
     token = authorization.replace("Bearer ", "")
-    
+
     try:
-        payload = decode_token(token)
-        email = payload.get("sub")
-        if email:
-            return db.query(User).filter(User.email == email).first()
+        auth_service = get_auth_service(db)
+        return await auth_service.get_current_user(token)
     except:
         pass
-    
+
     return None
 
 
 # Endpoints
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserRegister, db: Session = Depends(get_db)):
+async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
     """
     Register a new user account.
 
@@ -179,12 +171,12 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     """
     auth_service = get_auth_service(db)
 
-    # Register user using auth service
-    result = auth_service.register_user(
+    # Use auth service to register user
+    result = await auth_service.register_user(
         email=user_data.email,
         username=user_data.username,
         password=user_data.password,
-        full_name=user_data.full_name or ""
+        full_name=user_data.full_name
     )
 
     if not result["success"]:
@@ -193,20 +185,27 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
             detail=result["error"]
         )
 
-    # Authenticate user immediately to get tokens
-    auth_result = auth_service.authenticate_user(user_data.email, user_data.password)
+    # Extract user data and tokens
+    user_data_dict = result["user"]
+    access_token = result.get("access_token")
+    refresh_token = result.get("refresh_token")
 
-    if not auth_result:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration successful but login failed"
-        )
+    if not access_token or not refresh_token:
+        # If tokens weren't generated, create them (for email verification flow)
+        token_data = {"sub": str(user_data_dict["id"]), "email": user_data_dict["email"], "username": user_data_dict["username"]}
+        access_token = auth_service.create_access_token(token_data)
+        refresh_token = auth_service.create_refresh_token(token_data)
 
-    return auth_result
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=settings.jwt_expiration_hours * 60 * 60,
+        user=user_data_dict
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserLogin, db: Session = Depends(get_db)):
+async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     """
     Authenticate user and return tokens.
 
@@ -216,168 +215,252 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
     """
     auth_service = get_auth_service(db)
 
-    # Authenticate user
-    auth_result = auth_service.authenticate_user(credentials.email, credentials.password)
+    # Use auth service to authenticate user
+    result = await auth_service.authenticate_user(credentials.email, credentials.password)
 
-    if not auth_result:
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
         )
 
-    return auth_result
+    return TokenResponse(
+        access_token=result["access_token"],
+        refresh_token=result["refresh_token"],
+        expires_in=result["expires_in"],
+        user=result["user"]
+    )
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 async def logout(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Logout user and blacklist current token.
-    
-    Token will no longer be valid for authentication.
+    Logout user.
+
+    Note: Token blacklisting not implemented yet - tokens remain valid until expiry.
     """
-    token = credentials.credentials
-    blacklist_token(token)
-    
+    # TODO: Implement token blacklisting for proper logout
     return {"message": "Successfully logged out"}
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+async def refresh_token(request: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
     """
     Refresh access token using refresh token.
-    
+
     - Validates refresh token
     - Issues new access and refresh tokens
     """
-    try:
-        payload = decode_token(request.refresh_token)
-        
-        # Verify it's a refresh token
-        if payload.get("type") != "refresh":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type"
-            )
-        
-        email = payload.get("sub")
-        if not email:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload"
-            )
-        
-        # Get user
-        user = db.query(User).filter(User.email == email).first()
-        if not user or not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found or inactive"
-            )
-        
-        # Create new token pair
-        tokens = create_token_pair({"sub": user.email})
-        
-        # Blacklist old refresh token
-        blacklist_token(request.refresh_token)
-        
-        return {
-            **tokens,
-            "user": user.to_dict()
-        }
-    
-    except HTTPException:
-        raise
-    except Exception as e:
+    auth_service = get_auth_service(db)
+
+    result = await auth_service.refresh_access_token(request.refresh_token)
+
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token refresh failed: {str(e)}"
+            detail="Invalid or expired refresh token"
         )
+
+    # Get user info for response
+    user = await auth_service.get_current_user(result["access_token"])
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+
+    return TokenResponse(
+        access_token=result["access_token"],
+        refresh_token="",  # Don't return new refresh token in this simple implementation
+        expires_in=result["expires_in"],
+        user=user.to_dict()
+    )
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_profile(current_user: User = Depends(get_current_user)):
     """
     Get current user profile.
-    
+
     Returns complete user information (excluding sensitive fields).
     """
-    return current_user.to_dict()
+    return UserResponse(**current_user.to_dict())
 
 
 @router.put("/me", response_model=UserResponse)
 async def update_profile(
     updates: UserUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Update current user profile.
-    
+
     Allows updating: full_name, bio, website, avatar_url
     """
-    # Update fields if provided
-    if updates.full_name is not None:
-        current_user.full_name = updates.full_name
-    
-    if updates.bio is not None:
-        current_user.bio = updates.bio
-    
-    if updates.website is not None:
-        current_user.website = updates.website
-    
-    if updates.avatar_url is not None:
-        current_user.avatar_url = updates.avatar_url
-    
-    current_user.updated_at = datetime.utcnow()
-    
-    db.commit()
-    db.refresh(current_user)
-    
-    return current_user.to_dict()
+    auth_service = get_auth_service(db)
+
+    # Convert updates to dict and filter out None values
+    update_dict = {k: v for k, v in updates.model_dump().items() if v is not None}
+
+    result = await auth_service.update_user_profile(str(current_user.id), **update_dict)
+
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["error"]
+        )
+
+    return UserResponse(**result["user"])
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user_by_id(
-    user_id: int,
-    db: Session = Depends(get_db),
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)  # Requires authentication
 ):
     """
     Get user by ID (public profile).
-    
+
     Requires authentication to prevent scraping.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    
+    result = await db.execute(db.query(User).filter(User.id == user_id))
+    user = result.scalar_one_or_none()
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    
-    return user.to_dict()
+
+    return UserResponse(**user.to_dict())
 
 
 @router.get("/check-email/{email}")
-async def check_email_available(email: str, db: Session = Depends(get_db)):
+async def check_email_available(email: str, db: AsyncSession = Depends(get_db)):
     """
     Check if email is available for registration.
-    
+
     Returns: {"available": true/false}
     """
-    existing = db.query(User).filter(User.email == email).first()
+    result = await db.execute(db.query(User).filter(User.email == email.lower()))
+    existing = result.scalar_one_or_none()
     return {"available": existing is None}
 
 
 @router.get("/check-username/{username}")
-async def check_username_available(username: str, db: Session = Depends(get_db)):
+async def check_username_available(username: str, db: AsyncSession = Depends(get_db)):
     """
     Check if username is available.
-    
+
     Returns: {"available": true/false}
     """
-    existing = db.query(User).filter(User.username == username).first()
+    result = await db.execute(db.query(User).filter(User.username == username))
+    existing = result.scalar_one_or_none()
     return {"available": existing is None}
+
+
+@router.post("/request-password-reset")
+async def request_password_reset(request: PasswordResetRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Request password reset for email address.
+
+    Sends reset email if account exists.
+    """
+    auth_service = get_auth_service(db)
+    result = await auth_service.initiate_password_reset(request.email)
+
+    # Always return success for security (don't reveal if email exists)
+    return {"message": result["message"]}
+
+
+@router.post("/reset-password")
+async def reset_password(request: PasswordReset, db: AsyncSession = Depends(get_db)):
+    """
+    Reset password using reset token.
+
+    Validates token and updates password.
+    """
+    auth_service = get_auth_service(db)
+    result = await auth_service.reset_password(request.token, request.new_password)
+
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["error"]
+        )
+
+    return {"message": result["message"]}
+
+
+@router.post("/verify-email")
+async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
+    """
+    Verify user email using verification token.
+
+    Marks email as verified.
+    """
+    auth_service = get_auth_service(db)
+    result = await auth_service.verify_email(token)
+
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["error"]
+        )
+
+    return {"message": result["message"]}
+
+
+@router.post("/change-password")
+async def change_password(
+    current_password: str = Body(..., embed=True),
+    new_password: str = Body(..., embed=True),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Change current user's password.
+
+    Requires current password for verification.
+    """
+    auth_service = get_auth_service(db)
+    result = await auth_service.change_password(
+        str(current_user.id),
+        current_password,
+        new_password
+    )
+
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["error"]
+        )
+
+    return {"message": result["message"]}
+
+
+@router.delete("/account")
+async def deactivate_account(
+    password: str = Body(..., embed=True),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Deactivate current user account.
+
+    Requires password confirmation.
+    """
+    auth_service = get_auth_service(db)
+    result = await auth_service.deactivate_account(str(current_user.id), password)
+
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["error"]
+        )
+
+    return {"message": result["message"]}

@@ -21,25 +21,25 @@ SECRET_KEY = os.getenv("JWT_SECRET")
 
 # CRITICAL: Fail fast if JWT_SECRET is not set or is weak
 if not SECRET_KEY:
-    print("❌ CRITICAL ERROR: JWT_SECRET environment variable is not set!")
+    print("CRITICAL ERROR: JWT_SECRET environment variable is not set!")
     print("   This is required for security. Generate with: openssl rand -hex 64")
     print("   Exiting to prevent insecure operation...")
     sys.exit(1)
 
 if SECRET_KEY == "jwt-secret-key-for-development" or SECRET_KEY == "change-me-in-production":
-    print("❌ CRITICAL ERROR: JWT_SECRET is set to a default/placeholder value!")
+    print("CRITICAL ERROR: JWT_SECRET is set to a default/placeholder value!")
     print("   This is a security vulnerability. Generate a secure secret:")
     print("   openssl rand -hex 64")
     print("   Exiting to prevent insecure operation...")
     sys.exit(1)
 
 if len(SECRET_KEY) < 32:
-    print("❌ CRITICAL ERROR: JWT_SECRET is too short (must be at least 32 characters)!")
+    print("CRITICAL ERROR: JWT_SECRET is too short (must be at least 32 characters)!")
     print("   Generate a secure secret: openssl rand -hex 64")
     print("   Exiting to prevent insecure operation...")
     sys.exit(1)
 
-print("✅ JWT_SECRET validated - secure key in use")
+print("SUCCESS: JWT_SECRET validated - secure key in use")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60  # 24 hours

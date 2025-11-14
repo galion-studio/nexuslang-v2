@@ -1,0 +1,386 @@
+name: 📊 Advanced Monitoring & Alerting
+
+on:
+  schedule:
+    # Run every 15 minutes
+    - cron: '*/15 * * * *'
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      alert_level:
+        description: 'Alert sensitivity level'
+        required: false
+        type: choice
+        options:
+          - low
+          - medium
+          - high
+        default: medium
+
+env:
+  ALERT_LEVEL: ${{ github.event.inputs.alert_level || 'medium' }}
+
+jobs:
+  health-monitoring:
+    name: 🩺 Health Monitoring
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🩺 Service Health Checks
+        run: |
+          echo "🩺 Running comprehensive health checks..."
+
+          # Check all core services
+          services=(
+            "http://localhost/health:Nginx Health"
+            "http://localhost:8010/health:Backend API"
+            "http://localhost:3010:Frontend App"
+            "http://localhost:8080/health:Monitoring Dashboard"
+            "http://localhost:3001/api/health:Grafana"
+            "http://localhost:9090/-/healthy:Prometheus"
+          )
+
+          FAILED_SERVICES=()
+          WARNING_SERVICES=()
+
+          for service in "${services[@]}"; do
+            url=$(echo $service | cut -d: -f1)
+            name=$(echo $service | cut -d: -f2)
+
+            if curl -f -s --max-time 10 "$url" > /dev/null 2>&1; then
+              echo "✅ $name: Healthy"
+            else
+              # Check if it's a warning (slow response) or failure
+              if curl -s --max-time 30 "$url" > /dev/null 2>&1; then
+                echo "⚠️  $name: Slow response"
+                WARNING_SERVICES+=("$name")
+              else
+                echo "❌ $name: Unhealthy"
+                FAILED_SERVICES+=("$name")
+              fi
+            fi
+          done
+
+          # Set outputs for next jobs
+          echo "failed_services=${#FAILED_SERVICES[@]}" >> $GITHUB_ENV
+          echo "warning_services=${#WARNING_SERVICES[@]}" >> $GITHUB_ENV
+
+          if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+            echo "❌ Critical services failed: ${FAILED_SERVICES[*]}"
+            exit 1
+          fi
+
+          if [ ${#WARNING_SERVICES[@]} -gt 0 ]; then
+            echo "⚠️ Services with warnings: ${WARNING_SERVICES[*]}"
+          fi
+
+          echo "✅ Health check completed"
+
+  performance-monitoring:
+    name: ⚡ Performance Monitoring
+    runs-on: ubuntu-latest
+    needs: [health-monitoring]
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚡ API Performance Tests
+        run: |
+          echo "⚡ Running API performance tests..."
+
+          # Test API response times
+          for i in {1..5}; do
+            start_time=$(date +%s.%3N)
+            curl -s -w "@curl-format.txt" -o /dev/null http://localhost:8010/health
+            end_time=$(date +%s.%3N)
+
+            response_time=$(echo "$end_time - $start_time" | bc 2>/dev/null || echo "0")
+            echo "API Response Time $i: ${response_time}s"
+          done
+
+      - name: 💾 Resource Usage Monitoring
+        run: |
+          echo "💾 Monitoring system resources..."
+
+          # CPU usage
+          CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+          echo "CPU Usage: ${CPU_USAGE}%"
+
+          # Memory usage
+          MEM_USAGE=$(free | grep Mem | awk '{printf "%.2f", $3/$2 * 100.0}')
+          echo "Memory Usage: ${MEM_USAGE}%"
+
+          # Disk usage
+          DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
+          echo "Disk Usage: ${DISK_USAGE}%"
+
+          # Check thresholds based on alert level
+          if [ "$ALERT_LEVEL" = "high" ]; then
+            CPU_THRESHOLD=70
+            MEM_THRESHOLD=80
+            DISK_THRESHOLD=85
+          elif [ "$ALERT_LEVEL" = "low" ]; then
+            CPU_THRESHOLD=90
+            MEM_THRESHOLD=95
+            DISK_THRESHOLD=95
+          else
+            CPU_THRESHOLD=80
+            MEM_THRESHOLD=85
+            DISK_THRESHOLD=90
+          fi
+
+          ALERTS=()
+
+          if (( $(echo "$CPU_USAGE > $CPU_THRESHOLD" | bc -l) )); then
+            ALERTS+=("High CPU usage: ${CPU_USAGE}%")
+          fi
+
+          if (( $(echo "$MEM_USAGE > $MEM_THRESHOLD" | bc -l) )); then
+            ALERTS+=("High memory usage: ${MEM_USAGE}%")
+          fi
+
+          if [ "$DISK_USAGE" -gt "$DISK_THRESHOLD" ]; then
+            ALERTS+=("High disk usage: ${DISK_USAGE}%")
+          fi
+
+          if [ ${#ALERTS[@]} -gt 0 ]; then
+            echo "🚨 Resource alerts detected:"
+            for alert in "${ALERTS[@]}"; do
+              echo "   • $alert"
+            done
+            echo "alerts_detected=true" >> $GITHUB_ENV
+          else
+            echo "✅ All resource usage within normal limits"
+            echo "alerts_detected=false" >> $GITHUB_ENV
+          fi
+
+  gpu-monitoring:
+    name: 🎮 GPU Monitoring
+    runs-on: ubuntu-latest
+    needs: [performance-monitoring]
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🎮 GPU Health Check
+        run: |
+          echo "🎮 Checking GPU status..."
+
+          # Check if GPU monitoring is available
+          if curl -f -s http://localhost:8080/api/system/metrics > /dev/null 2>&1; then
+            echo "✅ GPU monitoring service available"
+
+            # Get GPU metrics
+            curl -s http://localhost:8080/api/system/metrics | jq '.gpu // empty' || echo "GPU metrics not available"
+
+          else
+            echo "⚠️ GPU monitoring service not available"
+          fi
+
+  security-monitoring:
+    name: 🔒 Security Monitoring
+    runs-on: ubuntu-latest
+    needs: [gpu-monitoring]
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔒 Security Checks
+        run: |
+          echo "🔒 Running security monitoring checks..."
+
+          # Check for security headers
+          SECURITY_HEADERS=$(curl -s -I http://localhost | grep -E "(X-Frame-Options|X-Content-Type-Options|Content-Security-Policy)" | wc -l)
+
+          if [ "$SECURITY_HEADERS" -ge 3 ]; then
+            echo "✅ Security headers properly configured"
+          else
+            echo "⚠️ Missing security headers: $SECURITY_HEADERS/3 configured"
+          fi
+
+          # Check for exposed sensitive endpoints
+          SENSITIVE_ENDPOINTS=(
+            "/api/admin"
+            "/api/debug"
+            "/.env"
+            "/.git"
+            "/phpmyadmin"
+            "/wp-admin"
+          )
+
+          EXPOSED_ENDPOINTS=()
+          for endpoint in "${SENSITIVE_ENDPOINTS[@]}"; do
+            if curl -s --head http://localhost$endpoint | grep -q "200\|301\|302"; then
+              EXPOSED_ENDPOINTS+=("$endpoint")
+            fi
+          done
+
+          if [ ${#EXPOSED_ENDPOINTS[@]} -gt 0 ]; then
+            echo "🚨 Potentially exposed sensitive endpoints:"
+            for endpoint in "${EXPOSED_ENDPOINTS[@]}"; do
+              echo "   • $endpoint"
+            done
+          else
+            echo "✅ No sensitive endpoints exposed"
+          fi
+
+      - name: 🔐 SSL/TLS Validation
+        run: |
+          echo "🔐 Checking SSL/TLS configuration..."
+
+          # Check if SSL is enabled (would check production domain)
+          if curl -f -s https://localhost/health > /dev/null 2>&1; then
+            echo "✅ SSL/TLS properly configured"
+          else
+            echo "⚠️ SSL/TLS not configured or not working"
+          fi
+
+  alerting:
+    name: 🚨 Alerting System
+    runs-on: ubuntu-latest
+    needs: [security-monitoring]
+    if: always()
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🚨 Process Alerts
+        run: |
+          echo "🚨 Processing monitoring alerts..."
+
+          # Check for any failures in previous jobs
+          FAILED_JOBS=0
+
+          # Check job statuses (this is simplified - in practice you'd check each job)
+          if [ "${{ needs.health-monitoring.result }}" = "failure" ]; then
+            FAILED_JOBS=$((FAILED_JOBS + 1))
+            echo "❌ Health monitoring failed"
+          fi
+
+          if [ "${{ needs.performance-monitoring.result }}" = "failure" ]; then
+            FAILED_JOBS=$((FAILED_JOBS + 1))
+            echo "❌ Performance monitoring failed"
+          fi
+
+          if [ "${{ needs.security-monitoring.result }}" = "failure" ]; then
+            FAILED_JOBS=$((FAILED_JOBS + 1))
+            echo "❌ Security monitoring failed"
+          fi
+
+          # Check for resource alerts
+          if [ "${{ env.alerts_detected }}" = "true" ]; then
+            echo "⚠️ Resource alerts detected"
+          fi
+
+          if [ $FAILED_JOBS -gt 0 ]; then
+            echo "🚨 CRITICAL: $FAILED_JOBS monitoring checks failed"
+
+            # Create high-priority alert
+            cat > alert.json << EOF
+            {
+              "alert_level": "critical",
+              "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+              "message": "$FAILED_JOBS monitoring checks failed",
+              "details": {
+                "failed_jobs": $FAILED_JOBS,
+                "environment": "production",
+                "run_id": "${{ github.run_id }}"
+              }
+            }
+            EOF
+
+          elif [ "${{ env.alerts_detected }}" = "true" ]; then
+            echo "⚠️ WARNING: Resource alerts detected"
+
+            # Create warning alert
+            cat > alert.json << EOF
+            {
+              "alert_level": "warning",
+              "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+              "message": "Resource alerts detected",
+              "details": {
+                "type": "resource_alert",
+                "environment": "production",
+                "run_id": "${{ github.run_id }}"
+              }
+            }
+            EOF
+
+          else
+            echo "✅ All monitoring checks passed"
+          fi
+
+      - name: 📢 Send Alerts
+        if: always()
+        run: |
+          # Send alerts to configured channels
+          if [ -f "alert.json" ]; then
+            echo "📢 Sending alerts..."
+
+            # Discord notification (if webhook configured)
+            if [ -n "${{ secrets.DISCORD_WEBHOOK }}" ]; then
+              curl -H "Content-Type: application/json" \
+                   -X POST \
+                   "${{ secrets.DISCORD_WEBHOOK }}" \
+                   -d @alert.json
+            fi
+
+            # Slack notification (if webhook configured)
+            if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+              curl -H "Content-Type: application/json" \
+                   -X POST \
+                   "${{ secrets.SLACK_WEBHOOK }}" \
+                   -d @alert.json
+            fi
+
+            # Email alert (if SMTP configured)
+            # This would integrate with email service
+
+            echo "📢 Alerts sent to configured channels"
+          else
+            echo "✅ No alerts to send"
+          fi
+
+      - name: 📊 Generate Monitoring Report
+        run: |
+          echo "# Advanced Monitoring Report" > monitoring-report.md
+          echo "" >> monitoring-report.md
+          echo "## Report Details" >> monitoring-report.md
+          echo "- **Timestamp:** $(date)" >> monitoring-report.md
+          echo "- **Environment:** Production" >> monitoring-report.md
+          echo "- **Alert Level:** $ALERT_LEVEL" >> monitoring-report.md
+          echo "- **Run ID:** ${{ github.run_id }}" >> monitoring-report.md
+          echo "" >> monitoring-report.md
+
+          echo "## Health Status" >> monitoring-report.md
+          echo "- Health Monitoring: ${{ needs.health-monitoring.result }}" >> monitoring-report.md
+          echo "- Performance Monitoring: ${{ needs.performance-monitoring.result }}" >> monitoring-report.md
+          echo "- GPU Monitoring: ${{ needs.gpu-monitoring.result }}" >> monitoring-report.md
+          echo "- Security Monitoring: ${{ needs.security-monitoring.result }}" >> monitoring-report.md
+          echo "" >> monitoring-report.md
+
+          if [ "${{ env.alerts_detected }}" = "true" ]; then
+            echo "## ⚠️ Active Alerts" >> monitoring-report.md
+            echo "Resource usage alerts detected. Check system metrics." >> monitoring-report.md
+            echo "" >> monitoring-report.md
+          fi
+
+          echo "## Recommendations" >> monitoring-report.md
+          echo "1. Review monitoring dashboards regularly" >> monitoring-report.md
+          echo "2. Set up automated alerting for critical issues" >> monitoring-report.md
+          echo "3. Monitor resource usage trends" >> monitoring-report.md
+          echo "4. Regular security assessments" >> monitoring-report.md
+
+      - name: 📤 Upload Monitoring Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: monitoring-report
+          path: monitoring-report.md

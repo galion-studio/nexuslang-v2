@@ -1,134 +1,158 @@
 """
-Speech-to-Text Service
-Uses OpenAI Whisper for speech recognition.
+Backend Speech-to-Text Service
+Handles server-side speech recognition using Whisper API
 """
 
-import whisper
-import tempfile
-from typing import Dict, Any, Optional
-from pathlib import Path
+import os
+import logging
+from typing import Optional, Dict, Any
+import openai
+from pydantic import BaseModel
 
-from ...core.config import settings
+logger = logging.getLogger(__name__)
 
 
-class STTService:
+class STTRequest(BaseModel):
+    """STT request model"""
+    audio_data: bytes
+    language: str = "en"
+    model: str = "whisper-1"
+    response_format: str = "json"
+    temperature: float = 0.0
+
+
+class STTResponse(BaseModel):
+    """STT response model"""
+    text: str
+    language: str
+    confidence: float = 0.9
+    processing_time: float
+    model: str
+
+
+class BackendSTTService:
     """
-    Speech-to-Text service using Whisper.
+    Backend STT service using OpenAI Whisper API
     """
-    
-    def __init__(self, model_name: Optional[str] = None):
+
+    def __init__(self):
+        self.api_key = os.getenv("OPENAI_API_KEY")
+        if not self.api_key:
+            logger.warning("OPENAI_API_KEY not found, STT service will not work")
+
+        # Initialize OpenAI client
+        self.client = openai.OpenAI(api_key=self.api_key) if self.api_key else None
+
+    async def transcribe_audio(self, request: STTRequest) -> STTResponse:
         """
-        Initialize STT service.
-        
+        Transcribe audio data using Whisper API
+
         Args:
-            model_name: Whisper model name (tiny, base, small, medium, large)
-        """
-        self.model_name = model_name or settings.WHISPER_MODEL
-        self.device = settings.WHISPER_DEVICE
-        self.model = None
-        
-    def load_model(self):
-        """
-        Load Whisper model.
-        Lazy loading to save memory.
-        """
-        if self.model is None:
-            print(f"Loading Whisper model: {self.model_name} on {self.device}")
-            self.model = whisper.load_model(self.model_name, device=self.device)
-            print("✅ Whisper model loaded")
-    
-    async def transcribe(
-        self,
-        audio_data: bytes,
-        language: Optional[str] = None,
-        task: str = "transcribe"
-    ) -> Dict[str, Any]:
-        """
-        Transcribe audio to text.
-        
-        Args:
-            audio_data: Audio bytes (WAV, MP3, etc.)
-            language: Language code (auto-detect if None)
-            task: 'transcribe' or 'translate' (translate to English)
-        
+            request: STT request with audio data
+
         Returns:
-            Dict with 'text', 'language', 'confidence', 'segments'
+            STT response with transcription
+
+        Raises:
+            Exception: If transcription fails
         """
-        # Load model if not loaded
-        self.load_model()
-        
-        # Save audio to temp file (Whisper requires file path)
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
-            f.write(audio_data)
-            temp_path = f.name
-        
+        if not self.client:
+            raise Exception("OpenAI API key not configured")
+
         try:
-            # Transcribe
-            result = self.model.transcribe(
-                temp_path,
-                language=language,
-                task=task,
-                fp16=False  # Disable for CPU
-            )
-            
-            # Calculate average confidence
-            segments = result.get("segments", [])
-            avg_confidence = sum(s.get("no_speech_prob", 0) for s in segments) / len(segments) if segments else 0.0
-            
-            return {
-                "text": result["text"],
-                "language": result.get("language", "unknown"),
-                "confidence": 1.0 - avg_confidence,  # Convert no_speech_prob to confidence
-                "segments": [
-                    {
-                        "start": s["start"],
-                        "end": s["end"],
-                        "text": s["text"]
-                    }
-                    for s in segments
-                ]
-            }
-        
-        finally:
-            # Clean up temp file
-            Path(temp_path).unlink(missing_ok=True)
-    
-    async def detect_language(self, audio_data: bytes) -> str:
+            import time
+            start_time = time.time()
+
+            # Save audio data to temporary file
+            import tempfile
+            import base64
+
+            # If audio_data is base64 encoded, decode it
+            if isinstance(request.audio_data, str):
+                audio_data = base64.b64decode(request.audio_data)
+            else:
+                audio_data = request.audio_data
+
+            # Create temporary file
+            with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_file:
+                temp_file.write(audio_data)
+                temp_file_path = temp_file.name
+
+            try:
+                # Call Whisper API
+                with open(temp_file_path, "rb") as audio_file:
+                    transcription = self.client.audio.transcriptions.create(
+                        file=audio_file,
+                        model=request.model,
+                        language=request.language,
+                        response_format=request.response_format,
+                        temperature=request.temperature
+                    )
+
+                processing_time = time.time() - start_time
+
+                # Extract text from response
+                if isinstance(transcription, dict):
+                    text = transcription.get("text", "")
+                else:
+                    text = str(transcription)
+
+                # Clean up text
+                text = text.strip()
+
+                response = STTResponse(
+                    text=text,
+                    language=request.language,
+                    confidence=0.9,  # Whisper doesn't provide confidence
+                    processing_time=processing_time,
+                    model=request.model
+                )
+
+                logger.info(f"STT transcription completed in {processing_time:.2f}s")
+                return response
+
+            finally:
+                # Clean up temporary file
+                import os
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+
+        except Exception as e:
+            logger.error(f"STT transcription failed: {str(e)}")
+            raise Exception(f"Speech recognition failed: {str(e)}")
+
+    async def get_supported_languages(self) -> list[str]:
         """
-        Detect language from audio.
+        Get list of supported languages
+
+        Returns:
+            List of language codes
         """
-        self.load_model()
-        
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
-            f.write(audio_data)
-            temp_path = f.name
-        
-        try:
-            # Load audio and detect language
-            audio = whisper.load_audio(temp_path)
-            audio = whisper.pad_or_trim(audio)
-            
-            # Make log-Mel spectrogram
-            mel = whisper.log_mel_spectrogram(audio).to(self.model.device)
-            
-            # Detect language
-            _, probs = self.model.detect_language(mel)
-            detected_lang = max(probs, key=probs.get)
-            
-            return detected_lang
-        
-        finally:
-            Path(temp_path).unlink(missing_ok=True)
+        # Whisper supports these languages
+        return [
+            "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr",
+            "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi",
+            "he", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no",
+            "th", "ur", "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk",
+            "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk",
+            "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw",
+            "gl", "mr", "pa", "si", "km", "sn", "yo", "so", "af", "oc",
+            "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo",
+            "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl",
+            "mg", "as", "tt", "haw", "ln", "ha", "ba", "jw", "su"
+        ]
+
+    def is_available(self) -> bool:
+        """
+        Check if STT service is available
+
+        Returns:
+            True if service is configured and ready
+        """
+        return self.client is not None
 
 
-# Global STT service instance
-_stt_service = None
-
-
-def get_stt_service() -> STTService:
-    """Get or create global STT service."""
-    global _stt_service
-    if _stt_service is None:
-        _stt_service = STTService()
-    return _stt_service
-
+# Global instance
+stt_service = BackendSTTService()

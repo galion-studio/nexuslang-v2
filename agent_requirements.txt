@@ -1,0 +1,39 @@
+# Core dependencies for Galion Agent System v2.2
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# AI/ML dependencies
+openai==1.3.0
+openrouter==0.0.5
+
+# Async and utilities
+asyncio-mqtt==0.13.1
+psutil==5.9.0
+
+# Data processing
+numpy==1.24.3
+pandas==2.1.3
+
+# Security and auth
+bcrypt==4.0.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Database and caching (lightweight versions)
+redis==4.6.0
+psycopg2-binary==2.9.9
+
+# HTTP client
+httpx==0.25.2
+aiofiles==23.2.1
+
+# Voice processing (CPU compatible)
+torch==2.1.1
+torchaudio==2.1.1
+TTS==0.22.0
+
+# Additional utilities
+python-dotenv==1.0.0
+requests==2.31.0

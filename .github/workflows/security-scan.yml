@@ -1,0 +1,195 @@
+name: 🔒 Security Scan
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  trivy-scan:
+    name: 🔍 Trivy Vulnerability Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+          exit-code: 1  # Fail on vulnerabilities
+
+      - name: 🐳 Run Trivy Docker image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          scan-ref: 'docker.io/library/python:3.12-slim'
+          format: 'sarif'
+          output: 'trivy-image-results.sarif'
+
+      - name: 📤 Upload security scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+
+      - name: 📤 Upload image scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-image-results.sarif'
+
+  dependency-check:
+    name: 📦 Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 🔍 Run npm audit
+        run: |
+          cd galion-app
+          npm audit --audit-level=moderate --json > npm-audit-results.json || true
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: 🔍 Run safety check for Python
+        run: |
+          pip install safety
+          cd v2/backend
+          safety check --json > safety-results.json || true
+
+      - name: 📊 Generate security report
+        run: |
+          echo "# Security Scan Report" > security-report.md
+          echo "Generated: $(date)" >> security-report.md
+          echo "" >> security-report.md
+
+          if [ -f "galion-app/npm-audit-results.json" ]; then
+            echo "## NPM Audit Results" >> security-report.md
+            cat galion-app/npm-audit-results.json >> security-report.md
+            echo "" >> security-report.md
+          fi
+
+          if [ -f "v2/backend/safety-results.json" ]; then
+            echo "## Python Safety Results" >> security-report.md
+            cat v2/backend/safety-results.json >> security-report.md
+            echo "" >> security-report.md
+          fi
+
+      - name: 📤 Upload security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-scan-report
+          path: security-report.md
+
+  secrets-scan:
+    name: 🔐 Secrets Detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Run TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  codeql-analysis:
+    name: 🔬 CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: 🐍 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 🔬 Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, python
+
+      - name: 🔍 Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: 🔬 Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript"
+          upload: true
+
+  compliance-check:
+    name: 📋 Compliance Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Check for sensitive files
+        run: |
+          # Check for accidentally committed secrets
+          if find . -name "*.key" -o -name "*.pem" -o -name "*.crt" -o -name ".env*" | grep -v ".env.template" | grep -v ".env.example"; then
+            echo "⚠️ Sensitive files detected!"
+            exit 1
+          else
+            echo "✅ No sensitive files detected"
+          fi
+
+      - name: 📋 License compliance
+        run: |
+          # Check for license files
+          if [ -f "LICENSE" ]; then
+            echo "✅ License file present"
+          else
+            echo "⚠️ No license file found"
+          fi
+
+      - name: 🔒 Security headers check
+        run: |
+          # Check for security configurations
+          if grep -r "Content-Security-Policy" galion-app/ || grep -r "X-Frame-Options" galion-app/; then
+            echo "✅ Security headers configured"
+          else
+            echo "⚠️ Security headers not found"
+          fi

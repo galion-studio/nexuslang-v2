@@ -1,0 +1,91 @@
+# Dedicated AI Model Serving Dockerfile
+# GPU-optimized for high-performance model inference
+
+FROM nvidia/cuda:12.1-runtime-ubuntu22.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
+WORKDIR /app
+
+# Install minimal system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.12 \
+    python3.12-dev \
+    python3-pip \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PyTorch with CUDA support first
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Install model serving dependencies
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    transformers \
+    accelerate \
+    bitsandbytes \
+    optimum \
+    auto-gptq \
+    peft \
+    vllm \
+    text-generation-inference \
+    huggingface-hub \
+    sentence-transformers \
+    faiss-gpu \
+    chromadb \
+    redis \
+    prometheus-client \
+    psutil
+
+# Install additional GPU optimization packages
+RUN pip install --no-cache-dir \
+    deepspeed \
+    xformers \
+    flash-attn \
+    triton \
+    cupy-cuda12x
+
+# Create directories
+RUN mkdir -p /app/models /app/cache /app/logs
+
+# Copy model serving code
+COPY models/ /app/models/
+COPY core/ /app/core/
+COPY services/ /app/services/
+COPY start_models.py /app/
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash modelserver && \
+    chown -R modelserver:modelserver /app
+USER modelserver
+
+# GPU configuration
+ENV CUDA_VISIBLE_DEVICES=all
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+ENV GPU_MEMORY_FRACTION=0.9
+ENV GPU_ALLOW_GROWTH=true
+
+# Model serving configuration
+ENV MODEL_CACHE_DIR=/app/models
+ENV MAX_MODEL_MEMORY=8GB
+ENV MODEL_PRELOAD_STRATEGY=on_demand
+ENV BATCH_SIZE=4
+ENV MAX_SEQUENCE_LENGTH=2048
+ENV QUANTIZATION=4bit
+
+# Expose port
+EXPOSE 8001
+
+# Health check
+HEALTHCHECK --interval=60s --timeout=30s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+# Run model server
+CMD ["python", "start_models.py"]

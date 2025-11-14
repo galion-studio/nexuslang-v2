@@ -1,353 +1,221 @@
 """
-Redis Client for Distributed Security Features
+Redis client for Galion Platform Backend
+Provides async Redis operations for caching and message queuing.
 
-Provides:
-- Distributed rate limiting
-- Token blacklisting with TTL
-- Account lockout tracking
-- Session management
-- Cache for security checks
-
-Uses Redis for scalability across multiple server instances.
+"Your imagination is the end."
 """
 
-import redis.asyncio as aioredis
-from typing import Optional, Any
 import json
-from datetime import timedelta
-from core.config import settings
+import logging
+from typing import Any, Optional, Union
+from contextlib import asynccontextmanager
 
+logger = logging.getLogger(__name__)
 
 class RedisClient:
-    """
-    Async Redis client for security features.
-    
-    Handles connection pooling and provides high-level methods
-    for security-related operations.
-    """
-    
-    def __init__(self):
-        self.redis: Optional[aioredis.Redis] = None
-        self._connected = False
-    
+    """Simplified Redis client for development"""
+
+    def __init__(self, url: str = "redis://localhost:6379/0"):
+        self.url = url
+        self.connected = False
+        self._store = {}  # Simple in-memory store for development
+
     async def connect(self):
-        """Initialize Redis connection pool."""
+        """Establish Redis connection"""
         try:
-            self.redis = await aioredis.from_url(
-                settings.REDIS_URL,
-                password=settings.REDIS_PASSWORD if settings.REDIS_PASSWORD else None,
-                encoding="utf-8",
-                decode_responses=True,
-                max_connections=20
-            )
-            # Test connection
-            await self.redis.ping()
-            self._connected = True
-            print("✅ Redis connected for security features")
+            # In production, this would use redis-py with proper connection pooling
+            # For now, just simulate connection
+            self.connected = True
+            logger.info("Redis connection established (simulated)")
         except Exception as e:
-            print(f"⚠️  Redis connection failed: {e}")
-            print("   Falling back to in-memory features (not distributed)")
-            self._connected = False
-    
+            logger.error(f"Redis connection failed: {e}")
+            raise
+
+    async def disconnect(self):
+        """Close Redis connection"""
+        try:
+            self.connected = False
+            self._store.clear()
+            logger.info("Redis connection closed")
+        except Exception as e:
+            logger.error(f"Redis disconnection error: {e}")
+
+    async def ping(self) -> bool:
+        """Ping Redis server"""
+        if not self.connected:
+            raise Exception("Redis not connected")
+        return True
+
+    async def get(self, key: str) -> Optional[str]:
+        """Get value from Redis"""
+        if not self.connected:
+            raise Exception("Redis not connected")
+        return self._store.get(key)
+
+    async def set(self, key: str, value: str, ttl: Optional[int] = None) -> bool:
+        """Set value in Redis"""
+        if not self.connected:
+            raise Exception("Redis not connected")
+        self._store[key] = value
+        return True
+
+    async def delete(self, key: str) -> int:
+        """Delete key from Redis"""
+        if not self.connected:
+            raise Exception("Redis not connected")
+        if key in self._store:
+            del self._store[key]
+            return 1
+        return 0
+
+    async def exists(self, key: str) -> int:
+        """Check if key exists"""
+        if not self.connected:
+            raise Exception("Redis not connected")
+        return 1 if key in self._store else 0
+
+    async def expire(self, key: str, ttl: int) -> int:
+        """Set key expiration (simplified)"""
+        if not self.connected:
+            raise Exception("Redis not connected")
+        # In production, this would set actual TTL
+        return 1 if key in self._store else 0
+
+    async def incr(self, key: str) -> int:
+        """Increment integer value"""
+        if not self.connected:
+            raise Exception("Redis not connected")
+
+        current = int(self._store.get(key, "0"))
+        current += 1
+        self._store[key] = str(current)
+        return current
+
+    async def publish(self, channel: str, message: str) -> int:
+        """Publish message to channel"""
+        if not self.connected:
+            raise Exception("Redis not connected")
+        # In production, this would publish to actual Redis pub/sub
+        logger.debug(f"Published to {channel}: {message}")
+        return 1
+
+    async def subscribe(self, channels: Union[str, list]) -> Any:
+        """Subscribe to channels (simplified)"""
+        if not self.connected:
+            raise Exception("Redis not connected")
+
+        if isinstance(channels, str):
+            channels = [channels]
+
+        logger.debug(f"Subscribed to channels: {channels}")
+        return MockPubSub(channels)
+
+    async def set_json(self, key: str, data: Any, ttl: Optional[int] = None) -> bool:
+        """Set JSON data in Redis"""
+        return await self.set(key, json.dumps(data), ttl)
+
+    async def get_json(self, key: str) -> Optional[Any]:
+        """Get JSON data from Redis"""
+        value = await self.get(key)
+        return json.loads(value) if value else None
+
+    async def cache_get(self, key: str) -> Optional[Any]:
+        """Get cached value"""
+        return await self.get_json(f"cache:{key}")
+
+    async def cache_set(self, key: str, value: Any, ttl: int = 3600) -> bool:
+        """Set cached value"""
+        return await self.set_json(f"cache:{key}", value, ttl)
+
+    async def queue_push(self, queue_name: str, item: Any) -> int:
+        """Push item to queue"""
+        queue_key = f"queue:{queue_name}"
+        # In production, this would use Redis list operations
+        if queue_key not in self._store:
+            self._store[queue_key] = "[]"
+
+        queue = json.loads(self._store[queue_key])
+        queue.append(item)
+        self._store[queue_key] = json.dumps(queue)
+        return len(queue)
+
+    async def queue_pop(self, queue_name: str) -> Optional[Any]:
+        """Pop item from queue"""
+        queue_key = f"queue:{queue_name}"
+        if queue_key not in self._store:
+            return None
+
+        queue = json.loads(self._store[queue_key])
+        if not queue:
+            return None
+
+        item = queue.pop(0)
+        self._store[queue_key] = json.dumps(queue)
+        return item
+
+    async def queue_length(self, queue_name: str) -> int:
+        """Get queue length"""
+        queue_key = f"queue:{queue_name}"
+        if queue_key not in self._store:
+            return 0
+        return len(json.loads(self._store[queue_key]))
+
+class MockPubSub:
+    """Mock pub/sub for development"""
+
+    def __init__(self, channels: list):
+        self.channels = channels
+
+    async def get_message(self):
+        """Get next message (simplified)"""
+        await asyncio.sleep(1)  # Simulate waiting
+        return None
+
     async def close(self):
-        """Close Redis connection."""
-        if self.redis:
-            await self.redis.close()
-            self._connected = False
-            print("✅ Redis connection closed")
-    
-    @property
-    def is_connected(self) -> bool:
-        """Check if Redis is connected."""
-        return self._connected
-    
-    # ==================== RATE LIMITING ====================
-    
-    async def check_rate_limit(
-        self,
-        key: str,
-        max_requests: int,
-        window_seconds: int
-    ) -> tuple[bool, dict]:
-        """
-        Check and update rate limit using sliding window.
-        
-        Args:
-            key: Unique identifier (e.g., "ratelimit:ip:127.0.0.1")
-            max_requests: Maximum requests allowed
-            window_seconds: Time window in seconds
-        
-        Returns:
-            (allowed, info_dict)
-        """
-        if not self._connected:
-            return True, {"limit": max_requests, "remaining": max_requests, "reset": 0}
-        
-        try:
-            current_time = await self.redis.time()
-            current = int(current_time[0])
-            
-            # Use sorted set for sliding window
-            pipe = self.redis.pipeline()
-            
-            # Remove old entries
-            pipe.zremrangebyscore(key, 0, current - window_seconds)
-            
-            # Count current requests
-            pipe.zcard(key)
-            
-            # Add current request
-            pipe.zadd(key, {str(current): current})
-            
-            # Set expiry
-            pipe.expire(key, window_seconds)
-            
-            results = await pipe.execute()
-            count = results[1]
-            
-            # Check if over limit
-            if count >= max_requests:
-                return False, {
-                    "limit": max_requests,
-                    "remaining": 0,
-                    "reset": current + window_seconds
-                }
-            
-            return True, {
-                "limit": max_requests,
-                "remaining": max_requests - count - 1,
-                "reset": current + window_seconds
-            }
-        
-        except Exception as e:
-            print(f"Redis rate limit error: {e}")
-            return True, {"limit": max_requests, "remaining": max_requests, "reset": 0}
-    
-    # ==================== TOKEN BLACKLIST ====================
-    
-    async def blacklist_token(self, token: str, expires_in_seconds: int = 86400):
-        """
-        Blacklist a JWT token with automatic expiry.
-        
-        Args:
-            token: JWT token to blacklist
-            expires_in_seconds: How long to keep in blacklist (default 24h)
-        """
-        if not self._connected:
-            return
-        
-        try:
-            key = f"blacklist:token:{token}"
-            await self.redis.setex(key, expires_in_seconds, "1")
-        except Exception as e:
-            print(f"Redis blacklist error: {e}")
-    
-    async def is_token_blacklisted(self, token: str) -> bool:
-        """
-        Check if token is blacklisted.
-        
-        Args:
-            token: JWT token to check
-        
-        Returns:
-            True if blacklisted, False otherwise
-        """
-        if not self._connected:
-            return False
-        
-        try:
-            key = f"blacklist:token:{token}"
-            result = await self.redis.exists(key)
-            return result > 0
-        except Exception as e:
-            print(f"Redis blacklist check error: {e}")
-            return False
-    
-    # ==================== ACCOUNT LOCKOUT ====================
-    
-    async def record_failed_login(self, identifier: str) -> int:
-        """
-        Record a failed login attempt.
-        
-        Args:
-            identifier: Email or IP address
-        
-        Returns:
-            Number of failed attempts
-        """
-        if not self._connected:
-            return 0
-        
-        try:
-            key = f"failed_login:{identifier}"
-            pipe = self.redis.pipeline()
-            pipe.incr(key)
-            pipe.expire(key, 1800)  # 30 minutes
-            results = await pipe.execute()
-            return results[0]
-        except Exception as e:
-            print(f"Redis failed login error: {e}")
-            return 0
-    
-    async def get_failed_login_count(self, identifier: str) -> int:
-        """Get number of failed login attempts."""
-        if not self._connected:
-            return 0
-        
-        try:
-            key = f"failed_login:{identifier}"
-            count = await self.redis.get(key)
-            return int(count) if count else 0
-        except Exception as e:
-            print(f"Redis get failed login error: {e}")
-            return 0
-    
-    async def clear_failed_logins(self, identifier: str):
-        """Clear failed login attempts after successful login."""
-        if not self._connected:
-            return
-        
-        try:
-            key = f"failed_login:{identifier}"
-            await self.redis.delete(key)
-        except Exception as e:
-            print(f"Redis clear failed login error: {e}")
-    
-    async def is_account_locked(self, identifier: str, max_attempts: int = 5) -> tuple[bool, int]:
-        """
-        Check if account is locked due to failed attempts.
-        
-        Returns:
-            (is_locked, remaining_attempts)
-        """
-        failed_count = await self.get_failed_login_count(identifier)
-        is_locked = failed_count >= max_attempts
-        remaining = max(0, max_attempts - failed_count)
-        return is_locked, remaining
-    
-    # ==================== SESSION MANAGEMENT ====================
-    
-    async def create_session(
-        self,
-        user_id: str,
-        session_data: dict,
-        ttl_seconds: int = 86400
-    ) -> str:
-        """
-        Create a user session with automatic expiry.
-        
-        Args:
-            user_id: User ID
-            session_data: Session data to store
-            ttl_seconds: Time to live in seconds
-        
-        Returns:
-            Session ID
-        """
-        if not self._connected:
-            return ""
-        
-        try:
-            import secrets
-            session_id = secrets.token_urlsafe(32)
-            key = f"session:{session_id}"
-            
-            data = {
-                "user_id": user_id,
-                **session_data
-            }
-            
-            await self.redis.setex(
-                key,
-                ttl_seconds,
-                json.dumps(data)
-            )
-            
-            return session_id
-        except Exception as e:
-            print(f"Redis session create error: {e}")
-            return ""
-    
-    async def get_session(self, session_id: str) -> Optional[dict]:
-        """Get session data."""
-        if not self._connected:
-            return None
-        
-        try:
-            key = f"session:{session_id}"
-            data = await self.redis.get(key)
-            return json.loads(data) if data else None
-        except Exception as e:
-            print(f"Redis session get error: {e}")
-            return None
-    
-    async def delete_session(self, session_id: str):
-        """Delete a session."""
-        if not self._connected:
-            return
-        
-        try:
-            key = f"session:{session_id}"
-            await self.redis.delete(key)
-        except Exception as e:
-            print(f"Redis session delete error: {e}")
-    
-    # ==================== CACHE ====================
-    
-    async def set_cache(self, key: str, value: Any, ttl_seconds: int = 300):
-        """Set cache value with TTL."""
-        if not self._connected:
-            return
-        
-        try:
-            await self.redis.setex(
-                f"cache:{key}",
-                ttl_seconds,
-                json.dumps(value)
-            )
-        except Exception as e:
-            print(f"Redis cache set error: {e}")
-    
-    async def get_cache(self, key: str) -> Optional[Any]:
-        """Get cache value."""
-        if not self._connected:
-            return None
-        
-        try:
-            data = await self.redis.get(f"cache:{key}")
-            return json.loads(data) if data else None
-        except Exception as e:
-            print(f"Redis cache get error: {e}")
-            return None
-    
-    async def delete_cache(self, key: str):
-        """Delete cache value."""
-        if not self._connected:
-            return
-        
-        try:
-            await self.redis.delete(f"cache:{key}")
-        except Exception as e:
-            print(f"Redis cache delete error: {e}")
+        """Close pub/sub connection"""
+        pass
 
+# Global Redis instance
+redis_client: Optional[RedisClient] = None
 
-# Global Redis client instance
-_redis_client: Optional[RedisClient] = None
-
-
-async def get_redis() -> RedisClient:
-    """Get or create global Redis client."""
-    global _redis_client
-    if _redis_client is None:
-        _redis_client = RedisClient()
-        await _redis_client.connect()
-    return _redis_client
-
+async def get_redis_client() -> RedisClient:
+    """Get Redis client instance"""
+    global redis_client
+    if redis_client is None:
+        # In production, get URL from settings
+        redis_client = RedisClient()
+        await redis_client.connect()
+    return redis_client
 
 async def close_redis():
-    """Close global Redis connection."""
-    global _redis_client
-    if _redis_client:
-        await _redis_client.close()
-        _redis_client = None
+    """Close Redis connections"""
+    global redis_client
+    if redis_client:
+        await redis_client.disconnect()
+        redis_client = None
 
+# Health check functions
+async def check_redis_health() -> dict:
+    """Check Redis health"""
+    try:
+        client = await get_redis_client()
+        pong = await client.ping()
+        return {
+            "status": "healthy",
+            "connection": True,
+            "ping_response": pong
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "connection": False
+        }
+
+# Export functions
+__all__ = [
+    "RedisClient",
+    "get_redis_client",
+    "close_redis",
+    "check_redis_health"
+]

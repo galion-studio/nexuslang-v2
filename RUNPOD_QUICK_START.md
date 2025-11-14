@@ -25,7 +25,7 @@ export PORT=8080
 pkill -f "uvicorn.*8080" || true
 mkdir -p /workspace/logs
 cd v2/backend
-nohup python -m uvicorn main:app --host 0.0.0.0 --port 8080 --workers 2 > /workspace/logs/galion-backend.log 2>&1 &
+nohup python -m uvicorn main_simple:app --host 0.0.0.0 --port 8080 --workers 2 > /workspace/logs/galion-backend.log 2>&1 &
 sleep 3
 curl http://localhost:8080/health
 ```
@@ -177,7 +177,7 @@ cat > /workspace/start-on-boot.sh << 'EOF'
 cd /workspace/project-nexus
 export PYTHONPATH=/workspace/project-nexus:/workspace/project-nexus/v2
 cd v2/backend
-python -m uvicorn main:app --host 0.0.0.0 --port 8080 --workers 2
+python -m uvicorn main_simple:app --host 0.0.0.0 --port 8080 --workers 2
 EOF
 
 chmod +x /workspace/start-on-boot.sh
@@ -282,7 +282,7 @@ export PYTHONPATH=/workspace/project-nexus:/workspace/project-nexus/v2 && \
 pkill -f uvicorn || true && \
 mkdir -p /workspace/logs && \
 cd v2/backend && \
-nohup python -m uvicorn main:app --host 0.0.0.0 --port 8080 --workers 2 > /workspace/logs/galion-backend.log 2>&1 & \
+nohup python -m uvicorn main_simple:app --host 0.0.0.0 --port 8080 --workers 2 > /workspace/logs/galion-backend.log 2>&1 & \
 sleep 3 && \
 curl http://localhost:8080/health && \
 curl -s ifconfig.me && \

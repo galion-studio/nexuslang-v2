@@ -108,7 +108,7 @@ fi
 # Step 6: Test import
 log_info "Testing Python imports..."
 cd "$BACKEND_DIR"
-python -c "from main import app; print('✅ Import successful')" 2>&1 | tee -a "$LOG_DIR/startup.log"
+python -c "from main_simple import app; print('✅ Import successful')" 2>&1 | tee -a "$LOG_DIR/startup.log"
 
 if [ ${PIPESTATUS[0]} -ne 0 ]; then
     log_error "Import test failed. Check logs:"
@@ -131,7 +131,7 @@ echo "==========================================================================
 echo ""
 
 # Start server in background
-nohup python -m uvicorn main:app \
+nohup python -m uvicorn main_simple:app \
     --host "$HOST" \
     --port "$PORT" \
     --workers "$WORKERS" \

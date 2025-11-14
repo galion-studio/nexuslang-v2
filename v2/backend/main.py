@@ -17,34 +17,49 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 import logging
 
-# Import error handlers
-from .core.errors import (
-    handle_galion_exception,
-    handle_validation_exception,
-    handle_http_exception,
-    handle_unexpected_exception,
-    add_request_id,
-    GalionException
-)
-from .core.performance import performance_middleware, setup_db_monitoring
-from .core.monitoring import monitoring_middleware, get_monitoring_system
-from .core.backup import get_backup_manager
+# Import error handlers - using absolute imports for uvicorn compatibility
+try:
+    from core.errors import (
+        handle_galion_exception,
+        handle_validation_exception,
+        handle_http_exception,
+        handle_unexpected_exception,
+        add_request_id,
+        GalionException
+    )
+    from core.performance import performance_middleware, setup_db_monitoring
+    from core.monitoring import monitoring_middleware, get_monitoring_system
+    from core.backup import get_backup_manager
+    print("✅ Core imports successful")
+except ImportError as e:
+    print(f"⚠️  Core imports failed, using fallbacks: {e}")
+    handle_galion_exception = None
+    performance_middleware = None
+    monitoring_middleware = None
+    get_backup_manager = None
 
-# Import routers individually
-from .api.auth import router as auth_router
-from .api.ai import router as ai_router
-from .api.nexuslang import router as nexuslang_router
-from .api.billing import router as billing_router
-from .api.video import router as video_router
-from .api.projects import router as projects_router
-from .api.teams import router as teams_router
-from .api.analytics import router as analytics_router
-from .api.grokopedia import router as grokopedia_router
-from .api.marketing import router as marketing_router
-from .api.errors import router as errors_router
-from .api.rbac import router as rbac_router
-from .api.mail import router as mail_router
-from .api.workplace import router as workplace_router
+# Import routers individually - using absolute imports for uvicorn compatibility
+try:
+    from api.auth import router as auth_router
+    from api.ai import router as ai_router
+    from api.nexuslang import router as nexuslang_router
+    from api.billing import router as billing_router
+    from api.video import router as video_router
+    from api.projects import router as projects_router
+    from api.teams import router as teams_router
+    from api.analytics import router as analytics_router
+    from api.grokopedia import router as grokopedia_router
+    from api.marketing import router as marketing_router
+    from api.errors import router as errors_router
+    from api.rbac import router as rbac_router
+    from api.mail import router as mail_router
+    from api.workplace import router as workplace_router
+    print("✅ Router imports successful")
+except ImportError as e:
+    print(f"⚠️  Router imports failed: {e}")
+    auth_router = ai_router = nexuslang_router = billing_router = video_router = None
+    projects_router = teams_router = analytics_router = grokopedia_router = None
+    marketing_router = errors_router = rbac_router = mail_router = workplace_router = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -106,21 +121,90 @@ async def health_check():
     }
 
 
-# Include routers
-app.include_router(auth_router, prefix="/api/v2/auth", tags=["Authentication"])
-app.include_router(ai_router, prefix="/api/v2", tags=["AI"])
-app.include_router(nexuslang_router, prefix="/api/v2", tags=["NexusLang"])
-app.include_router(billing_router, prefix="/api/v2/billing", tags=["Billing"])
-app.include_router(video_router, prefix="/api/v2/video", tags=["Video"])
-app.include_router(projects_router, prefix="/api/v2/projects", tags=["Projects"])
-app.include_router(teams_router, prefix="/api/v2/teams", tags=["Teams"])
-app.include_router(analytics_router, prefix="/api/v2/analytics", tags=["Analytics"])
-app.include_router(grokopedia_router, prefix="/api/v2", tags=["Grokopedia"])
-app.include_router(marketing_router, prefix="/api/v2", tags=["Marketing"])
-app.include_router(errors_router, prefix="/api/v2", tags=["Errors"])
-app.include_router(rbac_router, prefix="/api/v2", tags=["RBAC"])
-app.include_router(mail_router, prefix="/api/v2", tags=["Mail Integration"])
-app.include_router(workplace_router, prefix="/api/v1", tags=["Workplace Service"])
+# Include routers - only include if available
+if auth_router:
+    app.include_router(auth_router, prefix="/api/v2/auth", tags=["Authentication"])
+    print("✅ Auth router included")
+else:
+    print("⚠️  Auth router not available")
+
+if ai_router:
+    app.include_router(ai_router, prefix="/api/v2", tags=["AI"])
+    print("✅ AI router included")
+else:
+    print("⚠️  AI router not available")
+
+if nexuslang_router:
+    app.include_router(nexuslang_router, prefix="/api/v2", tags=["NexusLang"])
+    print("✅ NexusLang router included")
+else:
+    print("⚠️  NexusLang router not available")
+
+if billing_router:
+    app.include_router(billing_router, prefix="/api/v2/billing", tags=["Billing"])
+    print("✅ Billing router included")
+else:
+    print("⚠️  Billing router not available")
+
+if video_router:
+    app.include_router(video_router, prefix="/api/v2/video", tags=["Video"])
+    print("✅ Video router included")
+else:
+    print("⚠️  Video router not available")
+
+if projects_router:
+    app.include_router(projects_router, prefix="/api/v2/projects", tags=["Projects"])
+    print("✅ Projects router included")
+else:
+    print("⚠️  Projects router not available")
+
+if teams_router:
+    app.include_router(teams_router, prefix="/api/v2/teams", tags=["Teams"])
+    print("✅ Teams router included")
+else:
+    print("⚠️  Teams router not available")
+
+if analytics_router:
+    app.include_router(analytics_router, prefix="/api/v2/analytics", tags=["Analytics"])
+    print("✅ Analytics router included")
+else:
+    print("⚠️  Analytics router not available")
+
+if grokopedia_router:
+    app.include_router(grokopedia_router, prefix="/api/v2", tags=["Grokopedia"])
+    print("✅ Grokopedia router included")
+else:
+    print("⚠️  Grokopedia router not available")
+
+if marketing_router:
+    app.include_router(marketing_router, prefix="/api/v2", tags=["Marketing"])
+    print("✅ Marketing router included")
+else:
+    print("⚠️  Marketing router not available")
+
+if errors_router:
+    app.include_router(errors_router, prefix="/api/v2", tags=["Errors"])
+    print("✅ Errors router included")
+else:
+    print("⚠️  Errors router not available")
+
+if rbac_router:
+    app.include_router(rbac_router, prefix="/api/v2", tags=["RBAC"])
+    print("✅ RBAC router included")
+else:
+    print("⚠️  RBAC router not available")
+
+if mail_router:
+    app.include_router(mail_router, prefix="/api/v2", tags=["Mail Integration"])
+    print("✅ Mail router included")
+else:
+    print("⚠️  Mail router not available")
+
+if workplace_router:
+    app.include_router(workplace_router, prefix="/api/v1", tags=["Workplace Service"])
+    print("✅ Workplace router included")
+else:
+    print("⚠️  Workplace router not available")
 
 
 # WebSocket endpoint for real-time features
@@ -146,26 +230,42 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
 
 
 # Add request ID middleware
-app.middleware("http")(add_request_id)
+if add_request_id:
+    app.middleware("http")(add_request_id)
 
 # Add performance monitoring middleware
-app.middleware("http")(performance_middleware)
+if performance_middleware:
+    app.middleware("http")(performance_middleware)
 
 # Add comprehensive monitoring middleware
-app.middleware("http")(monitoring_middleware)
+if monitoring_middleware:
+    app.middleware("http")(monitoring_middleware)
 
-# Exception handlers
-@app.exception_handler(GalionException)
-async def galion_exception_handler(request, exc: GalionException):
-    return await handle_galion_exception(request, exc)
+# Exception handlers - only add if handlers are available
+if GalionException and handle_galion_exception:
+    @app.exception_handler(GalionException)
+    async def galion_exception_handler(request, exc: GalionException):
+        return await handle_galion_exception(request, exc)
 
 @app.exception_handler(ValidationError)
 async def validation_exception_handler(request, exc: ValidationError):
-    return await handle_validation_exception(request, exc)
+    if handle_validation_exception:
+        return await handle_validation_exception(request, exc)
+    else:
+        return JSONResponse(
+            status_code=422,
+            content={"error": "Validation error", "details": str(exc)}
+        )
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc: HTTPException):
-    return await handle_http_exception(request, exc)
+    if handle_http_exception:
+        return await handle_http_exception(request, exc)
+    else:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"error": exc.detail}
+        )
 
 @app.exception_handler(Exception)
 async def unexpected_exception_handler(request, exc: Exception):
@@ -180,23 +280,32 @@ async def startup_event():
 
     # Setup database performance monitoring
     try:
-        from .core.database import engine
-        setup_db_monitoring(engine)
-        logger.info("✅ Database performance monitoring enabled")
+        from core.database import engine
+        if setup_db_monitoring:
+            setup_db_monitoring(engine)
+            logger.info("✅ Database performance monitoring enabled")
+        else:
+            logger.warning("Database monitoring setup not available")
     except Exception as e:
         logger.warning(f"Failed to setup database monitoring: {e}")
 
     # Initialize monitoring system
     try:
-        monitoring_system = get_monitoring_system()
-        logger.info("✅ Comprehensive monitoring system initialized")
+        if get_monitoring_system:
+            monitoring_system = get_monitoring_system()
+            logger.info("✅ Comprehensive monitoring system initialized")
+        else:
+            logger.warning("Monitoring system not available")
     except Exception as e:
         logger.warning(f"Failed to initialize monitoring system: {e}")
 
     # Initialize backup system
     try:
-        backup_manager = get_backup_manager()
-        logger.info("✅ Backup system initialized")
+        if get_backup_manager:
+            backup_manager = get_backup_manager()
+            logger.info("✅ Backup system initialized")
+        else:
+            logger.warning("Backup manager not available")
     except Exception as e:
         logger.warning(f"Failed to initialize backup system: {e}")
 

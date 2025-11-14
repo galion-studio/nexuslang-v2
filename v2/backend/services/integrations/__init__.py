@@ -9,9 +9,9 @@ from .base_integration import BaseIntegration, IntegrationResult
 from .integration_manager import IntegrationManager
 from .github_integration import GitHubIntegration
 from .slack_integration import SlackIntegration
-from .jira_integration import JiraIntegration
-from .google_workspace_integration import GoogleWorkspaceIntegration
 from .webhook_integration import WebhookIntegration
+from .n8n_integration import N8NIntegration
+from .zapier_integration import ZapierIntegration
 
 __all__ = [
     'BaseIntegration',
@@ -19,7 +19,7 @@ __all__ = [
     'IntegrationManager',
     'GitHubIntegration',
     'SlackIntegration',
-    'JiraIntegration',
-    'GoogleWorkspaceIntegration',
-    'WebhookIntegration'
+    'WebhookIntegration',
+    'N8NIntegration',
+    'ZapierIntegration'
 ]

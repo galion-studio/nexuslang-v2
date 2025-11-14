@@ -14,9 +14,9 @@ from datetime import datetime
 from .base_integration import BaseIntegration, IntegrationResult
 from .github_integration import GitHubIntegration
 from .slack_integration import SlackIntegration
-from .jira_integration import JiraIntegration
-from .google_workspace_integration import GoogleWorkspaceIntegration
 from .webhook_integration import WebhookIntegration
+from .n8n_integration import N8NIntegration
+from .zapier_integration import ZapierIntegration
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +47,9 @@ class IntegrationManager:
         self.available_integrations = {
             'github': GitHubIntegration,
             'slack': SlackIntegration,
-            'jira': JiraIntegration,
-            'google_workspace': GoogleWorkspaceIntegration,
             'webhook': WebhookIntegration,
+            'n8n': N8NIntegration,
+            'zapier': ZapierIntegration,
         }
 
     async def initialize(self) -> bool:

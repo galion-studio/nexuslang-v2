@@ -24,6 +24,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from contextlib import asynccontextmanager
 
 # Try importing optional dependencies
 try:
@@ -40,11 +41,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown events."""
+    # Startup
+    logger.info("NEXUS LANG V2 SCIENTIFIC PLATFORM - Server started successfully")
+    yield
+    # Shutdown
+    logger.info("Server shutting down")
+
 # Create FastAPI application
 app = FastAPI(
     title="Nexus Lang V2 Scientific Platform",
     description="Scientific knowledge enhancement and research platform",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # Configure CORS - allow all origins for development
@@ -270,9 +281,9 @@ async def basic_query(request: QueryRequest):
 try:
     from api.grokopedia import router as grokopedia_router
     app.include_router(grokopedia_router, prefix="/api/v1", tags=["grokopedia"])
-    logger.info("✅ Grokopedia router loaded successfully")
+    logger.info("Grokopedia router loaded successfully")
 except Exception as e:
-    logger.warning(f"⚠️  Could not load Grokopedia router: {e}")
+    logger.warning(f"Could not load Grokopedia router: {e}")
     logger.info("Server will start without Grokopedia endpoints")
 
 # ============================================================================
@@ -312,30 +323,8 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 # ============================================================================
-# Startup Event
+# Application Lifespan Handled Above
 # ============================================================================
-
-@app.on_event("startup")
-async def startup_event():
-    """Display startup banner and initialize services."""
-    banner = """
-    ╔══════════════════════════════════════════════════════════════╗
-    ║  🧠 NEXUS LANG V2 SCIENTIFIC PLATFORM                       ║
-    ║  ══════════════════════════════════════════════════════════  ║
-    ║                                                              ║
-    ║  Status:  🚀 RUNNING                                        ║
-    ║  Version: 2.0.0                                             ║
-    ║                                                              ║
-    ║  Endpoints:                                                  ║
-    ║  • Health:    /health                                       ║
-    ║  • API Docs:  /docs                                         ║
-    ║  • Root:      /                                             ║
-    ║                                                              ║
-    ║  Ready for requests! ✅                                     ║
-    ╚══════════════════════════════════════════════════════════════╝
-    """
-    print(banner)
-    logger.info("Server started successfully")
 
 # ============================================================================
 # Main Entry Point
@@ -349,7 +338,7 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "8080"))
     workers = int(os.getenv("WORKERS", "2"))
     
-    print(f"🚀 Starting Nexus Lang V2 Server")
+    print(f"Starting Nexus Lang V2 Server")
     print(f"   Host: {host}")
     print(f"   Port: {port}")
     print(f"   Workers: {workers}")

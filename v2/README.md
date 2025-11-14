@@ -1,934 +1,936 @@
-﻿# ­čÜÇ NexusLang v2 - The AI-Native Programming Language
+﻿# 🧠 Nexus Lang V2 - Master Documentation
 
-> **"What language would AI create for itself?"**
-
-[![Version](https://img.shields.io/badge/version-2.0.0--beta-blue)](https://github.com/galion-studio/project-nexus)
-[![License](https://img.shields.io/badge/license-Open%20Source-green)](./LICENSE)
-[![Platform](https://img.shields.io/badge/platform-RunPod-purple)](https://runpod.io)
-[![Status](https://img.shields.io/badge/status-Alpha-orange)](https://developer.galion.app)
-
-**NexusLang v2** is the world's first AI-native programming language with binary optimization, personality-driven behavior, universal knowledge integration, and voice-first interaction.
-
-**Live Platform:** https://developer.galion.app  
-**API Documentation:** https://api.developer.galion.app/docs
+**Advanced Scientific Knowledge Enhancement Platform with AI-Powered Multi-Agent System**
 
 ---
 
-## ÔťĘ What Makes NexusLang v2 Unique?
+## 📋 Table of Contents
 
-### ­čĆć Industry-First Features
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Platform Components](#platform-components)
+- [Documentation Index](#documentation-index)
+- [Quick Start Guides](#quick-start-guides)
+- [Core Features](#core-features)
+- [API Reference](#api-reference)
+- [Deployment Options](#deployment-options)
+- [Development Workflow](#development-workflow)
+- [Integration Guide](#integration-guide)
+- [Troubleshooting](#troubleshooting)
+- [Resources](#resources)
 
-#### 1. **Binary Compilation** ÔÜí
-The **only AI language** with optimized binary format:
-- **10-15x faster** AI processing
-- **2-3x smaller** file size
-- Optimized for machine reading
-- Production-ready optimization
+---
 
+## 🎯 Overview
+
+Nexus Lang V2 is a next-generation scientific knowledge platform that combines:
+
+- 🤖 **Multi-Agent AI System** - Coordinated specialist agents
+- 🔬 **Grokopedia** - Deep scientific knowledge engine
+- 💬 **NexusLang** - Natural language programming
+- 🎤 **Voice AI** - Speech-to-text and text-to-speech
+- 📊 **Research Tools** - Templates, history, collaboration
+- 🌐 **Full-Stack Platform** - Backend, frontend, mobile
+
+### Philosophy
+
+We believe in **extremely deep understanding** through:
+- First principles thinking
+- Multi-domain knowledge synthesis
+- Cross-agent collaboration
+- Transparent reasoning processes
+- Scientific rigor and validation
+
+---
+
+## 🏗️ Architecture
+
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         NEXUS LANG V2 PLATFORM                      │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                          CLIENT LAYER                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
+│  │   Web App    │  │  Mobile App  │  │     CLI      │             │
+│  │  (Next.js)   │  │ (React Native)│  │   (Python)   │             │
+│  │              │  │              │  │              │             │
+│  │  📖 frontend/│  │              │  │              │             │
+│  │     README   │  │              │  │              │             │
+│  └──────────────┘  └──────────────┘  └──────────────┘             │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        API GATEWAY                                  │
+│                    FastAPI + NGINX + CORS                           │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        BACKEND SERVICES                             │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │  CORE APIs                        📖 backend/README         │  │
+│  │  ├── Grokopedia (Scientific)                               │  │
+│  │  ├── NexusLang (Programming)                               │  │
+│  │  ├── Voice AI (STT/TTS)                                    │  │
+│  │  ├── Research Tools                                        │  │
+│  │  └── User Management                                       │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │  AI AGENT SYSTEM                  📖 SCIENTIFIC_README     │  │
+│  │  ├── Agent Orchestrator                                    │  │
+│  │  ├── Scientific Agents (Physics, Chemistry, etc.)          │  │
+│  │  ├── First Principles Engine                               │  │
+│  │  ├── Knowledge Integrator                                  │  │
+│  │  └── Deep Search Engine                                    │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │  SUPPORTING SERVICES                                        │  │
+│  │  ├── Authentication & Authorization                         │  │
+│  │  ├── Rate Limiting & Caching                               │  │
+│  │  ├── Analytics & Monitoring                                │  │
+│  │  ├── Background Jobs                                       │  │
+│  │  └── Error Tracking                                        │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         DATA LAYER                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
+│  │  PostgreSQL  │  │     Redis    │  │  Vector DB   │             │
+│  │   (Primary)  │  │    (Cache)   │  │ (Embeddings) │             │
+│  └──────────────┘  └──────────────┘  └──────────────┘             │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Technology Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | Next.js 13+, React 18+, TypeScript, Tailwind CSS |
+| **Backend** | FastAPI, Python 3.8+, Uvicorn, SQLAlchemy |
+| **AI/ML** | OpenAI GPT-4, LangChain, Transformers, Vector DBs |
+| **Database** | PostgreSQL 13+, Redis 6+ |
+| **DevOps** | Docker, Kubernetes, GitHub Actions, RunPod |
+| **Monitoring** | Prometheus, Grafana, Sentry |
+
+---
+
+## 🧩 Platform Components
+
+### Backend Service
+**Location**: `v2/backend/`  
+**Documentation**: [Backend README](./backend/README.md)
+
+The heart of Nexus Lang V2 - a FastAPI application providing:
+
+- 🔌 **REST APIs** - Comprehensive API endpoints
+- 🤖 **AI Agents** - Multi-agent orchestration system
+- 🔬 **Grokopedia** - Scientific knowledge engine
+- 💬 **NexusLang** - Natural language to code compiler
+- 🎤 **Voice AI** - Speech processing services
+- 🔐 **Security** - Authentication, authorization, rate limiting
+- 📊 **Analytics** - Usage tracking and insights
+
+**Key Files**:
+- `main.py` - Full-featured server
+- `main_simple.py` - Simplified, reliable server
+- `api/` - API endpoint definitions
+- `services/` - Business logic and AI agents
+- `models/` - Database models
+- `core/` - Core utilities
+
+**Quick Start**:
 ```bash
-nexus compile myapp.nx --benchmark
-# Output: Compression: 2.71x, Speedup: 13.5x faster!
-```
-
-#### 2. **Personality System** ­čžá
-**Revolutionary:** AI with 24 customizable behavior traits across 6 categories:
-
-```nexuslang
-// Use predefined templates
-set_personality_template("creative_writer")
-set_personality_template("analytical_researcher")
-set_personality_template("empathetic_teacher")
-
-// Or define custom personalities
-personality {
-    curiosity: 0.9,      // Explores novel solutions
-    analytical: 0.8,     // Systematic thinking
-    creative: 0.7,       // Outside-the-box ideas
-    empathetic: 0.9,     // Understands user needs
-    adaptability: 0.8,   // Learns from feedback
-    transparency: 0.95   // Honest about capabilities
-}
-
-// Mix personalities, evolve over time
-mix_global_personality(other_traits, (0.7, 0.3))
-evolve_global_personality("empathy", 1.0, 0.1)
-```
-
-#### 3. **Knowledge Integration** ­čôÜ
-Query facts directly in your code:
-
-```nexuslang
-let facts = knowledge("quantum mechanics")
-for fact in facts {
-    print(fact["title"], fact["summary"])
-}
-```
-
-#### 4. **Voice Commands** ­čÄĄ
-Native text-to-speech and speech-to-text:
-
-```nexuslang
-say("Hello world!", emotion="excited")
-let response = listen(timeout=10)
-```
-
----
-
-## ­čÄ» Quick Start
-
-### Option 1: Web IDE (Instant)
-
-**No installation needed!**
-
-1. Go to: https://developer.galion.app/ide
-2. Register free account
-3. Start coding immediately!
-
-### Option 2: CLI Installation
-
-```bash
-# Install NexusLang
-pip install nexuslang
-
-# Run a program
-nexus run myprogram.nx
-
-# Compile to binary
-nexus compile myprogram.nx --benchmark
-
-# Start REPL
-nexus repl
-```
-
-### Option 3: Docker
-
-```bash
-docker run -it galion/nexuslang:v2
-```
-
----
-
-## ­čôľ Language Overview
-
-### Basic Syntax
-
-```nexuslang
-// Variables
-let x = 42
-const PI = 3.14159
-
-// Functions
-fn greet(name) {
-    print("Hello,", name)
-}
-
-// Control Flow
-if score > 90 {
-    print("Excellent!")
-}
-
-for i in 0..10 {
-    print(i)
-}
-
-// Arrays
-let numbers = [1, 2, 3, 4, 5]
-```
-
-### AI-Native Features
-
-```nexuslang
-// Define AI personality
-personality {
-    curiosity: 0.95,
-    precision: 0.9
-}
-
-// Query knowledge base
-let physics = knowledge("quantum physics")
-
-// Voice interaction
-say("Analyzing data...", emotion="thoughtful")
-
-// Build neural networks (no imports!)
-let model = Sequential(
-    Linear(784, 128),
-    ReLU(),
-    Linear(128, 10)
-)
-```
-
----
-
-## ­čĆŚ´ŞĆ Architecture
-
-### Complete Platform
-
-NexusLang v2 is not just a language - it's a **complete platform**:
-
-```
-ÔöîÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÉ
-Ôöé  NexusLang v2 Platform                   Ôöé
-ÔöťÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöĄ
-Ôöé  ­čÄĘ Web IDE (Monaco Editor)              Ôöé
-Ôöé  ­čöž Backend API (FastAPI)                Ôöé
-Ôöé  ­čŚä´ŞĆ  Database (PostgreSQL)               Ôöé
-Ôöé  ­čĺż Cache (Redis)                        Ôöé
-Ôöé  ­čôÜ Knowledge Base (Grokopedia)          Ôöé
-Ôöé  ­čÄĄ Voice System (TTS/STT)               Ôöé
-ÔööÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöś
-```
-
-### Components
-
-1. **Language Core**
-   - Lexer (tokenization)
-   - Parser (AST generation)
-   - Interpreter (execution)
-   - Binary Compiler (optimization)
-
-2. **Backend Services**
-   - REST API (18 endpoints)
-   - Authentication (JWT)
-   - Code Execution (sandboxed)
-   - Project Management
-
-3. **Frontend**
-   - Professional IDE
-   - Personality Editor
-   - Binary Compiler UI
-   - Real-time execution
-
-4. **Infrastructure**
-   - Docker deployment
-   - PostgreSQL database
-   - Redis caching
-   - RunPod hosting
-
----
-
-## ­čôŐ Performance
-
-### Benchmarks (Real Results)
-
-```
-Text Parsing:        2-3ms per file
-Binary Compilation:  10-15ms per file
-Compression Ratio:   2-3x smaller
-AI Processing:       10-15x faster
-API Response:        <50ms
-Code Execution:      <100ms
-```
-
-### Scalability
-
-- **Concurrent Users:** Tested up to 100
-- **API Rate Limit:** 60 requests/minute (free tier)
-- **Code Timeout:** 10 seconds
-- **Max Output:** 100KB
-
----
-
-## ­čÄô Examples
-
-### Example 1: Hello World
-
-```nexuslang
-fn main() {
-    print("Hello, NexusLang v2!")
-}
-
-main()
-```
-
-### Example 2: AI with Personality
-
-```nexuslang
-// Use a creative writer template
-set_personality_template("creative_writer")
-
-// Or define custom personality
-personality {
-    curiosity: 0.95,
-    analytical: 0.9,
-    creative: 0.85,
-    empathetic: 0.8,
-    adaptability: 0.9
-}
-
-fn solve_problem(problem) {
-    // Personality influences problem-solving approach
-    // High curiosity Ôćĺ explores novel approaches
-    // High analytical Ôćĺ systematic analysis
-    // High creative Ôćĺ innovative solutions
-    // High empathy Ôćĺ user-friendly explanations
-
-    print("Solving:", problem)
-    let approach = get_trait("curiosity") > 0.8 ? "creative" : "systematic"
-    print("Using", approach, "approach")
-}
-```
-
-### Example 3: Knowledge-Powered
-
-```nexuslang
-fn research(topic) {
-    let facts = knowledge(topic)
-    
-    for fact in facts {
-        print("­čôÜ", fact["title"])
-        print("  Ôćĺ", fact["summary"])
-    }
-}
-
-research("machine learning")
-```
-
-### Example 4: Complete AI Assistant
-
-```nexuslang
-personality {
-    empathetic: 0.95,
-    helpful: 1.0
-}
-
-fn main() {
-    say("Hello! How can I help?", emotion="friendly")
-    
-    let topic = "AI"
-    let facts = knowledge(topic)
-    
-    if facts.length > 0 {
-        say("I found information!", emotion="excited")
-        print(facts[0]["summary"])
-    }
-}
-
-main()
-```
-
-**See all 12 examples:** [`v2/nexuslang/examples/`](./nexuslang/examples/)
-
----
-
-## ­čôÜ Documentation
-
-### Complete Guides
-
-- **[Getting Started](./docs/GETTING_STARTED.md)** - Installation and first steps
-- **[Language Reference](./docs/LANGUAGE_REFERENCE.md)** - Complete syntax guide
-- **[API Documentation](./docs/API_DOCUMENTATION.md)** - REST API reference
-- **[Deployment Guide](./RUNPOD_DEPLOYMENT.md)** - RunPod setup
-- **[Quick Start](./QUICKSTART_NOW.md)** - 5-minute guide
-
-### API Reference
-
-**Base URL:** `https://api.developer.galion.app/api/v2`
-
-**Key Endpoints:**
-- `POST /auth/register` - Create account
-- `POST /auth/login` - Get JWT token
-- `POST /nexuslang/run` - Execute code
-- `POST /nexuslang/compile` - Compile to binary
-- `GET /nexuslang/examples` - Get example programs
-
-**Interactive Docs:** https://api.developer.galion.app/docs
-
----
-
-## ­čŤá´ŞĆ Technology Stack
-
-### Language
-- **Python 3.11+** - Core implementation
-- **FastAPI** - Backend framework
-- **SQLAlchemy** - Database ORM
-- **Pydantic** - Data validation
-
-### Frontend
-- **Next.js 14** - React framework
-- **TypeScript** - Type safety
-- **Monaco Editor** - Code editor
-- **Tailwind CSS** - Styling
-
-### Infrastructure
-- **PostgreSQL** - Primary database
-- **Redis** - Caching layer
-- **Docker** - Containerization
-- **RunPod** - Cloud hosting
-- **Cloudflare** - CDN & DNS
-
----
-
-## ­čÄ» Use Cases
-
-### 1. AI Research
-```nexuslang
-// Fast ML experimentation
-let model = Sequential(
-    Linear(784, 256),
-    ReLU(),
-    Linear(256, 10)
-)
-
-// No boilerplate, just code!
-```
-
-### 2. AI Assistants
-```nexuslang
-personality { empathetic: 0.95 }
-
-fn assist(query) {
-    let info = knowledge(query)
-    say("I found information!", emotion="helpful")
-    return info
-}
-```
-
-### 3. Production Apps
-```bash
-# Compile for deployment
-nexus compile app.nx
-
-# Deploy .nxb file (10x faster)
-# Your AI processes it efficiently
-```
-
-### 4. Education
-```nexuslang
-// Simple syntax for learners
-fn factorial(n) {
-    if n <= 1 { return 1 }
-    return n * factorial(n - 1)
-}
-
-print(factorial(5))  // 120
-```
-
----
-
-## ­čÜÇ Getting Started - 3 Ways
-
-### 1. Web IDE (Easiest)
-1. Visit: https://developer.galion.app/ide
-2. Register account
-3. Start coding!
-
-### 2. Local Development
-```bash
-git clone https://github.com/galion-studio/project-nexus.git
-cd project-nexus/v2/nexuslang
-pip install -e .
-nexus repl
-```
-
-### 3. Docker
-```bash
-docker-compose up -d
-# Access: http://localhost:3100
-```
-
----
-
-## ­čĺ╗ Platform Features
-
-### Web IDE
-- Ôťů **Monaco Editor** - Professional code editing
-- Ôťů **Syntax Highlighting** - NexusLang-specific
-- Ôťů **Auto-completion** - Intelligent suggestions
-- Ôťů **Run Button** - Execute instantly
-- Ôťů **Save to Cloud** - Projects persist
-- Ôťů **Keyboard Shortcuts** - Ctrl+S (save), Ctrl+Enter (run)
-
-### Unique UI Components
-- Ôťů **Personality Editor** - Interactive sliders for AI traits
-- Ôťů **Binary Compiler** - Visual speed comparison
-- Ôťů **Code Examples** - 12 comprehensive programs
-- Ôťů **Real-time Output** - See results instantly
-
----
-
-## ­čôł Roadmap
-
-### Alpha (Current) Ôťů
-- Core language features
-- Binary compilation
-- Web IDE
-- Basic API
-
-### Beta (Q1 2026)
-- Real-time collaboration
-- Full Grokopedia integration
-- Production voice system
-- Mobile support
-
-### v2.5 (Q2 2026)
-- VS Code extension
-- Advanced ML features
-- GPU acceleration
-- Package manager
-
-### v3.0 (2027)
-- Self-improving AI
-- Quantum computing support
-- Global knowledge network
-
----
-
-## ­čĄŁ Contributing
-
-We welcome contributions!
-
-```bash
-# Fork and clone
-git clone https://github.com/YOUR-USERNAME/project-nexus.git
-
-# Create branch
-git checkout -b feature/amazing-feature
-
-# Make changes and commit
-git commit -m "Add amazing feature"
-
-# Push and create PR
-git push origin feature/amazing-feature
-```
-
-**Areas to contribute:**
-- Language features
-- Standard library
-- Example programs
-- Documentation
-- Bug fixes
-- Testing
-
----
-
-## ­čôŐ Statistics
-
-### Implementation Stats
-- **Lines of Code:** 12,000+
-- **Files:** 50+
-- **API Endpoints:** 18
-- **Example Programs:** 12
-- **Documentation Pages:** 9
-- **Test Cases:** 25+
-
-### Performance Stats
-- **Compilation Speed:** 10-15ms
-- **Compression Ratio:** 2-3x
-- **AI Speedup:** 10-15x estimated
-- **API Response:** <50ms
-- **Uptime:** 99.9% target
-
----
-
-## ­čÄô Learn More
-
-### Tutorials
-1. **[Your First Program](./docs/GETTING_STARTED.md#your-first-program)**
-2. **[Personality System](./docs/LANGUAGE_REFERENCE.md#personality-blocks)**
-3. **[Knowledge Queries](./docs/LANGUAGE_REFERENCE.md#knowledge-integration)**
-4. **[Binary Compilation](./docs/LANGUAGE_REFERENCE.md#binary-compilation)**
-
-### Resources
-- **Documentation:** https://docs.nexuslang.dev (coming soon)
-- **Blog:** https://blog.nexuslang.dev (coming soon)
-- **Discord:** https://discord.gg/nexuslang (coming soon)
-- **Twitter:** @nexuslang (coming soon)
-
----
-
-## ­čĺí Why NexusLang v2?
-
-### The Problem
-Current AI development is too complex:
-- Import hell (torch, transformers, numpy...)
-- Verbose boilerplate
-- No AI optimization
-- Steep learning curve
-
-### The Solution
-NexusLang v2 is **simple and powerful**:
-
-**Python equivalent:**
-```python
-import torch
-import torch.nn as nn
-from transformers import AutoModel
-
-class Model(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Linear(784, 128)
-        # ... 20+ more lines
-```
-
-**NexusLang v2:**
-```nexuslang
-let model = Sequential(
-    Linear(784, 128),
-    ReLU(),
-    Linear(128, 10)
-)
-```
-
-**No imports. No boilerplate. Just code.** ÔťĘ
-
----
-
-## ­čîč Unique Value Propositions
-
-### 1. **Built from First Principles**
-- Questioned every assumption
-- Designed for AI, not adapted from human languages
-- Optimized for machine efficiency
-
-### 2. **Complete Platform**
-- Not just a language
-- Includes IDE, API, database, docs
-- Everything needed to deploy AI applications
-
-### 3. **Production Ready**
-- Binary compilation for deployment
-- Proper security (JWT, encryption)
-- Resource limits and monitoring
-- Professional code quality
-
-### 4. **Open Source**
-- All code public
-- Community-driven
-- Transparent development
-- Free to use
-
----
-
-## ­čôŽ What's Included
-
-### Language Implementation
-- **Lexer** - Tokenization with v2 keywords
-- **Parser** - AST generation for v2 syntax
-- **Interpreter** - Tree-walking executor
-- **Binary Compiler** - .nx Ôćĺ .nxb optimization
-- **CLI Tools** - run, compile, repl, debug
-
-### Backend API
-- **Authentication** - JWT with bcrypt
-- **Code Execution** - Sandboxed with limits
-- **Project Management** - CRUD operations
-- **File Management** - Version control
-- **Binary Compilation** - API endpoint
-
-### Web IDE
-- **Monaco Editor** - Professional editing
-- **Personality Editor** - Interactive UI
-- **Binary Visualizer** - Speed comparison
-- **File Explorer** - Project navigation
-- **Output Panel** - Real-time results
-
-### Documentation
-- Language Reference (complete syntax)
-- API Documentation (all endpoints)
-- Getting Started Guide
-- Deployment Guides
-- Example Programs (12)
-
----
-
-## ­čöž Development
-
-### Local Setup
-
-```bash
-# Clone repository
-git clone https://github.com/galion-studio/project-nexus.git
-cd project-nexus/v2
-
-# Backend
-cd backend
+cd v2/backend
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8100
+python main.py
+```
 
-# Frontend (new terminal)
+---
+
+### Frontend Application
+**Location**: `v2/frontend/`  
+**Documentation**: [Frontend README](./frontend/README.md)
+
+Modern web interface built with Next.js:
+
+- 🎨 **Beautiful UI** - Modern, responsive design
+- 🖥️ **IDE Integration** - Monaco editor for NexusLang
+- 💬 **Chat Interface** - Conversational AI interaction
+- 📊 **Dashboards** - Analytics and research tools
+- 👥 **Collaboration** - Team features
+- 📱 **Responsive** - Works on all devices
+
+**Key Directories**:
+- `app/` - Next.js 13 App Router pages
+- `components/` - Reusable React components
+- `lib/` - Utilities, hooks, API clients
+- `public/` - Static assets
+- `styles/` - Global styles
+
+**Quick Start**:
+```bash
+cd v2/frontend
+npm install
+npm run dev
+```
+
+---
+
+### Shared Libraries
+**Location**: `v2/shared/`
+
+Common utilities and libraries used across the platform:
+
+- 📚 **Utilities** - Shared helper functions
+- 🔧 **Types** - Common TypeScript/Python types
+- 🎨 **UI Components** - Shared components
+- 🔌 **API Contracts** - Shared API definitions
+
+---
+
+## 📚 Documentation Index
+
+### Core Documentation
+
+| Document | Description | Location |
+|----------|-------------|----------|
+| **Main README** | Platform overview | [../README.md](../README.md) |
+| **This Document** | V2 master guide | You are here |
+| **Backend Guide** | Backend development | [backend/README.md](./backend/README.md) |
+| **Frontend Guide** | Frontend development | [frontend/README.md](./frontend/README.md) |
+
+### Deployment Documentation
+
+| Document | Description | Location |
+|----------|-------------|----------|
+| **RunPod Deployment** | Complete RunPod guide | [../RUNPOD_DEPLOYMENT_README.md](../RUNPOD_DEPLOYMENT_README.md) |
+| **RunPod SSH Guide** | SSH deployment steps | [../RUNPOD_SSH_INSTRUCTIONS.md](../RUNPOD_SSH_INSTRUCTIONS.md) |
+| **Quick Reference** | Command quick reference | [../RUNPOD_QUICK_REFERENCE.md](../RUNPOD_QUICK_REFERENCE.md) |
+| **Troubleshooting** | Fix common issues | [../RUNPOD_WEB_SERVER_FIX.md](../RUNPOD_WEB_SERVER_FIX.md) |
+| **Copy-Paste Deploy** | One-command deployment | [../RUNPOD_COPY_PASTE_DEPLOY.txt](../RUNPOD_COPY_PASTE_DEPLOY.txt) |
+| **RunPod README** | RunPod-specific docs | [../runpod/README.md](../runpod/README.md) |
+
+### Scientific & AI Documentation
+
+| Document | Description | Location |
+|----------|-------------|----------|
+| **Scientific Knowledge** | Grokopedia guide | [SCIENTIFIC_KNOWLEDGE_README.md](./SCIENTIFIC_KNOWLEDGE_README.md) |
+| **Scientific API Ref** | API reference | [SCIENTIFIC_API_REFERENCE.md](./SCIENTIFIC_API_REFERENCE.md) |
+| **Integration Guide** | Integration docs | [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md) |
+| **Enhancement Summary** | Feature overview | [SCIENTIFIC_ENHANCEMENT_FINAL_SUMMARY.md](./SCIENTIFIC_ENHANCEMENT_FINAL_SUMMARY.md) |
+
+### Additional Resources
+
+| Document | Description | Location |
+|----------|-------------|----------|
+| **Scripts Guide** | Utility scripts | [../scripts/README.md](../scripts/README.md) |
+| **API Reference** | API documentation | [../API_REFERENCE.md](../API_REFERENCE.md) |
+
+---
+
+## 🚀 Quick Start Guides
+
+### For Users
+
+#### Using the Web Application
+
+1. **Access the platform**:
+   - Development: http://localhost:3000
+   - Production: https://galion.studio
+
+2. **Create an account**:
+   - Register with email
+   - Verify your account
+   - Complete profile
+
+3. **Start researching**:
+   - Navigate to Research Dashboard
+   - Submit scientific queries
+   - Explore results
+   - Save and share findings
+
+#### Using the API
+
+```python
+import requests
+
+# Submit a scientific query
+response = requests.post(
+    "https://galion.studio/api/v1/grokopedia/scientific-query",
+    json={
+        "query": "Explain quantum entanglement",
+        "domain": "physics",
+        "depth": "extremely_deep"
+    },
+    headers={"Authorization": "Bearer YOUR_TOKEN"}
+)
+
+result = response.json()
+print(result["analysis"])
+```
+
+---
+
+### For Developers
+
+#### Setting Up Local Environment
+
+**Step 1: Clone Repository**
+```bash
+git clone https://github.com/galion-studio/nexuslang-v2.git
+cd nexuslang-v2/v2
+```
+
+**Step 2: Backend Setup**
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env with your configuration
+python main.py
+```
+📖 **Detailed guide**: [Backend README](./backend/README.md)
+
+**Step 3: Frontend Setup**
+```bash
 cd frontend
 npm install
-npm run dev -- -p 3100
+cp .env.local.example .env.local
+# Edit .env.local with your configuration
+npm run dev
+```
+📖 **Detailed guide**: [Frontend README](./frontend/README.md)
 
-# Language (new terminal)
-cd nexuslang
-pip install -e .
-nexus repl
+**Step 4: Verify Installation**
+```bash
+# Backend health check
+curl http://localhost:8000/health
+
+# Frontend
+# Open http://localhost:3000 in browser
 ```
 
-### RunPod Deployment
+---
+
+### For DevOps
+
+#### Quick Deploy to RunPod
 
 ```bash
-cd /workspace/project-nexus/v2
-chmod +x deploy-nexuslang-to-runpod.sh
-./deploy-nexuslang-to-runpod.sh
+# One command deployment
+cd /workspace && \
+git clone https://github.com/galion-studio/nexuslang-v2.git project-nexus && \
+cd project-nexus && \
+git checkout clean-nexuslang && \
+chmod +x runpod-diagnose-and-fix.sh && \
+./runpod-diagnose-and-fix.sh
 ```
 
-**Complete guide:** [RUNPOD_DEPLOYMENT.md](./RUNPOD_DEPLOYMENT.md)
+📖 **Detailed guide**: [RunPod SSH Instructions](../RUNPOD_SSH_INSTRUCTIONS.md)
 
 ---
 
-## ­čÄĘ Example Programs
+## ✨ Core Features
 
-All examples in [`nexuslang/examples/`](./nexuslang/examples/):
+### 1. Grokopedia - Scientific Knowledge Engine
 
-1. **01_hello_world.nx** - Basic syntax
-2. **02_personality_traits.nx** - Basic personality system ÔşÉ
-3. **03_knowledge_query.nx** - Knowledge integration ÔşÉ
-4. **04_simple_neural_network.nx** - ML model building
-5. **05_binary_compilation.nx** - Binary optimization ÔşÉ
-6. **06_voice_interaction.nx** - Voice commands ÔşÉ
-7. **07_loops_and_arrays.nx** - Control flow
-8. **08_functions_and_recursion.nx** - Functions
-9. **09_ai_decision_making.nx** - Confidence scoring
-10. **10_complete_ai_assistant.nx** - Full AI assistant ÔşÉ
-11. **11_error_handling.nx** - Error handling
-12. **12_tensor_operations.nx** - Tensor mathematics
-13. **13_personality_templates.nx** - Personality templates ÔşÉ
-14. **14_personality_mixing.nx** - Personality mixing ÔşÉ
-15. **15_personality_evolution.nx** - Personality evolution ÔşÉ
-16. **16_complete_personality_demo.nx** - Complete personality demo ÔşÉ
+**What it does**:
+- Deep scientific analysis across multiple domains
+- First principles breakdown of complex topics
+- Multi-agent collaboration for comprehensive understanding
+- Citation management and source tracking
 
-ÔşÉ = Showcases v2 unique features
+**Key APIs**:
+- `POST /api/v1/grokopedia/scientific-query` - Submit queries
+- `POST /api/v1/grokopedia/first-principles-analysis` - Analyze with first principles
+- `POST /api/v1/grokopedia/scientific-validation` - Validate claims
+
+**Documentation**: [Scientific Knowledge README](./SCIENTIFIC_KNOWLEDGE_README.md)
+
+**Example**:
+```python
+# Submit scientific query
+response = api.grokopedia.scientific_query(
+    query="How does CRISPR work?",
+    domain="biology",
+    depth="extremely_deep"
+)
+```
 
 ---
 
-## ­čÄ» Core Concepts
+### 2. NexusLang - Natural Language Programming
 
-### Personality-Driven Behavior
+**What it does**:
+- Convert English descriptions to code
+- Support multiple target languages (Python, JavaScript, etc.)
+- AI-assisted code generation
+- Real-time compilation and execution
 
-Different personalities solve problems differently:
+**Key APIs**:
+- `POST /api/v1/nexuslang/compile` - Compile natural language to code
+- `POST /api/v1/nexuslang/execute` - Execute NexusLang code
+- `GET /api/v1/nexuslang/examples` - Get example code
 
-```nexuslang
-// Curious AI explores novel solutions
-personality { curiosity: 0.95 }
-
-// Analytical AI uses systematic methods
-personality { analytical: 0.95 }
-
-// Creative AI thinks outside the box
-personality { creative: 0.95 }
+**Example**:
+```python
+# Compile NexusLang to Python
+response = api.nexuslang.compile(
+    source="Create a function that sorts a list of numbers",
+    target_language="python"
+)
+print(response.code)
 ```
 
-### Knowledge as Code
+---
 
-Access universal knowledge seamlessly:
+### 3. Voice AI - Speech Processing
 
-```nexuslang
-// No external API calls needed
-let facts = knowledge("topic")
+**What it does**:
+- Speech-to-text (STT) conversion
+- Text-to-speech (TTS) synthesis
+- Voice training and customization
+- Real-time processing
 
-// Get related concepts
-let related = knowledge_related("topic")
+**Key APIs**:
+- `POST /api/v1/voice/speech-to-text` - Convert speech to text
+- `POST /api/v1/voice/text-to-speech` - Convert text to speech
+- `POST /api/v1/voice/train` - Train voice model
 
-// Confidence-scored, verified facts
-if facts[0]["confidence"] > 0.9 {
-    print("High confidence fact!")
+**Example**:
+```python
+# Convert speech to text
+with open("audio.wav", "rb") as f:
+    response = api.voice.speech_to_text(audio=f)
+    print(response.text)
+```
+
+---
+
+### 4. Multi-Agent System
+
+**What it does**:
+- Coordinated AI specialists for different domains
+- Parallel processing of complex queries
+- Agent collaboration and consensus
+- Transparent reasoning chains
+
+**Agents**:
+- 🔬 **Physics Agent** - Physics and cosmology
+- ⚗️ **Chemistry Agent** - Chemical processes
+- 🧮 **Mathematics Agent** - Mathematical analysis
+- 🧬 **Biology Agent** - Life sciences
+- ⚖️ **Law Agent** - Legal analysis
+- 📜 **History Agent** - Historical context
+- 💻 **Computer Science Agent** - Technical analysis
+
+**Architecture**: [Agent System Docs](./backend/services/agents/)
+
+---
+
+### 5. Research Tools
+
+**Features**:
+- 📝 **Research Templates** - Pre-built research workflows
+- 📚 **Research History** - Track your research journey
+- 👥 **Collaboration** - Team research features
+- 📊 **Analytics** - Insights and trends
+- 📤 **Export** - Multiple export formats
+
+**APIs**:
+- `GET /api/v1/research/templates` - List templates
+- `POST /api/v1/research/execute` - Execute research workflow
+- `GET /api/v1/research/history` - Get research history
+
+---
+
+## 📖 API Reference
+
+### Complete API Documentation
+
+When running locally:
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **OpenAPI JSON**: http://localhost:8000/openapi.json
+
+### API Categories
+
+| Category | Endpoints | Documentation |
+|----------|-----------|---------------|
+| **Core** | Health, system info | [Backend README](./backend/README.md#api-documentation) |
+| **Grokopedia** | Scientific queries | [Scientific API Reference](./SCIENTIFIC_API_REFERENCE.md) |
+| **NexusLang** | Code compilation | [Backend README](./backend/README.md#nexuslang-programming) |
+| **Voice** | Speech processing | [Backend README](./backend/README.md#voice-ai) |
+| **Auth** | Authentication | [Backend README](./backend/README.md#authentication) |
+| **Research** | Research tools | [Backend README](./backend/README.md#research-tools) |
+
+### Authentication
+
+All API requests require authentication:
+
+```python
+headers = {
+    "Authorization": "Bearer YOUR_JWT_TOKEN",
+    "Content-Type": "application/json"
 }
 ```
 
-### Binary Optimization
-
-Production deployment made easy:
-
-```bash
-# Development: Use .nx files
-nexus run app.nx
-
-# Production: Compile to .nxb
-nexus compile app.nx
-
-# Result: 10x faster for AI processing!
+Get token:
+```python
+response = requests.post(
+    "http://localhost:8000/api/v1/auth/login",
+    json={"email": "user@example.com", "password": "password"}
+)
+token = response.json()["access_token"]
 ```
 
 ---
 
-## ­čöĺ Security
+## 🌐 Deployment Options
 
-### Features
-- Ôťů **Password Hashing** - bcrypt with salt
-- Ôťů **JWT Tokens** - Secure authentication
-- Ôťů **CORS Protection** - Configurable origins
-- Ôťů **Input Validation** - Pydantic models
-- Ôťů **SQL Injection** - SQLAlchemy protection
-- Ôťů **Rate Limiting** - Per-user limits
-- Ôťů **Code Sandboxing** - Resource limits
+### 1. Local Development
 
-### Best Practices
-- Environment variables for secrets
-- HTTPS only in production
-- Token expiration (24 hours)
-- Password strength requirements
-- Audit logging
+**Best for**: Development, testing  
+**Requirements**: Python 3.8+, Node.js 16+, PostgreSQL, Redis
 
----
+```bash
+# Backend
+cd v2/backend && python main.py
 
-## ­čĺ░ Pricing
+# Frontend
+cd v2/frontend && npm run dev
+```
 
-### Free Tier
-- 100 AI credits/month
-- Web IDE access
-- 10 projects
-- All basic features
-- Community support
-
-### Pro Tier ($19/month)
-- 10,000 AI credits/month
-- Unlimited projects
-- Binary compilation
-- Priority support
-- Advanced features
-
-### Enterprise (Custom)
-- Unlimited credits
-- Private deployment
-- Custom features
-- Dedicated support
-- SLA guarantee
+📖 **Guide**: [Backend README](./backend/README.md#quick-start) | [Frontend README](./frontend/README.md#quick-start)
 
 ---
 
-## ­čô× Support & Community
+### 2. Docker
+
+**Best for**: Containerized deployment, consistency
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+📖 **Guide**: [Docker Compose Configuration](../docker-compose.yml)
+
+---
+
+### 3. RunPod (Recommended for AI)
+
+**Best for**: GPU-accelerated AI workloads, production
+
+```bash
+# One-command deployment
+cd /workspace && \
+git clone https://github.com/galion-studio/nexuslang-v2.git project-nexus && \
+cd project-nexus && \
+chmod +x runpod-diagnose-and-fix.sh && \
+./runpod-diagnose-and-fix.sh
+```
+
+📖 **Guides**:
+- [RunPod Deployment README](../RUNPOD_DEPLOYMENT_README.md)
+- [RunPod SSH Instructions](../RUNPOD_SSH_INSTRUCTIONS.md)
+- [RunPod Quick Reference](../RUNPOD_QUICK_REFERENCE.md)
+- [RunPod Troubleshooting](../RUNPOD_WEB_SERVER_FIX.md)
+
+---
+
+### 4. Kubernetes
+
+**Best for**: Large-scale production, high availability
+
+```bash
+# Apply configurations
+kubectl apply -f k8s/
+
+# Check status
+kubectl get pods -n nexus
+
+# View logs
+kubectl logs -f deployment/nexus-backend -n nexus
+```
+
+📖 **Guide**: [Kubernetes Configurations](../k8s/)
+
+---
+
+### 5. Cloud Providers
+
+**AWS, GCP, Azure**
+
+Use our Terraform configurations for automated setup:
+
+```bash
+cd terraform/aws  # or gcp, azure
+terraform init
+terraform plan
+terraform apply
+```
+
+📖 **Guide**: [Terraform Configurations](../terraform/)
+
+---
+
+## 💻 Development Workflow
+
+### Setting Up Development Environment
+
+1. **Fork and Clone**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/nexuslang-v2.git
+   cd nexuslang-v2
+   ```
+
+2. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+3. **Set Up Backend**
+   ```bash
+   cd v2/backend
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   pip install -r requirements-dev.txt  # Dev dependencies
+   ```
+
+4. **Set Up Frontend**
+   ```bash
+   cd v2/frontend
+   npm install
+   ```
+
+5. **Make Changes**
+   - Write code
+   - Add tests
+   - Update documentation
+
+6. **Test Changes**
+   ```bash
+   # Backend tests
+   cd v2/backend && pytest
+
+   # Frontend tests
+   cd v2/frontend && npm test
+
+   # Linting
+   cd v2/backend && flake8
+   cd v2/frontend && npm run lint
+   ```
+
+7. **Commit and Push**
+   ```bash
+   git add .
+   git commit -m "feat: add your feature description"
+   git push origin feature/your-feature-name
+   ```
+
+8. **Create Pull Request**
+   - Go to GitHub
+   - Create PR from your branch
+   - Fill in description
+   - Request review
+
+### Code Standards
+
+- **Python**: PEP 8, type hints, docstrings
+- **TypeScript**: ESLint rules, proper types
+- **Git**: Conventional commits
+- **Tests**: Write tests for new features
+- **Documentation**: Update relevant docs
+
+---
+
+## 🔌 Integration Guide
+
+### Using the Platform in Your Application
+
+#### JavaScript/TypeScript
+
+```typescript
+import { NexusClient } from '@nexuslang/sdk';
+
+const client = new NexusClient({
+  apiUrl: 'https://galion.studio',
+  apiKey: 'YOUR_API_KEY'
+});
+
+// Submit scientific query
+const result = await client.grokopedia.query({
+  query: 'Explain quantum computing',
+  domain: 'computer_science'
+});
+
+console.log(result.analysis);
+```
+
+#### Python
+
+```python
+from nexuslang import NexusClient
+
+client = NexusClient(
+    api_url='https://galion.studio',
+    api_key='YOUR_API_KEY'
+)
+
+# Submit scientific query
+result = client.grokopedia.query(
+    query='Explain quantum computing',
+    domain='computer_science'
+)
+
+print(result.analysis)
+```
+
+#### REST API
+
+```bash
+curl -X POST https://galion.studio/api/v1/grokopedia/scientific-query \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Explain quantum computing",
+    "domain": "computer_science"
+  }'
+```
+
+📖 **Full guide**: [Integration Guide](./INTEGRATION_GUIDE.md)
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### Backend Won't Start
+
+```bash
+# Check Python version
+python --version  # Should be 3.8+
+
+# Check dependencies
+pip install -r requirements.txt
+
+# Check database connection
+psql -U postgres -c "SELECT 1;"
+
+# Check environment variables
+cat .env | grep DATABASE_URL
+
+# Try simplified server
+python main_simple.py
+```
+
+📖 **Guide**: [Backend README - Troubleshooting](./backend/README.md#troubleshooting)
+
+---
+
+#### Frontend Won't Start
+
+```bash
+# Check Node version
+node --version  # Should be 16+
+
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Check environment
+cat .env.local | grep NEXT_PUBLIC_API_URL
+
+# Rebuild
+npm run build
+npm start
+```
+
+📖 **Guide**: [Frontend README - Troubleshooting](./frontend/README.md#troubleshooting)
+
+---
+
+#### API Connection Issues
+
+```bash
+# Test backend
+curl http://localhost:8000/health
+
+# Check CORS settings
+# In backend/main.py, check allowed_origins
+
+# Check API URL in frontend
+# In frontend/.env.local, check NEXT_PUBLIC_API_URL
+```
+
+---
+
+#### RunPod Deployment Issues
+
+```bash
+# Run diagnostic
+cd /workspace/project-nexus
+./runpod-diagnose-and-fix.sh
+
+# Check logs
+tail -50 /workspace/logs/galion-backend.log
+
+# Try simplified server
+./runpod-start-simple.sh
+```
+
+📖 **Guides**:
+- [RunPod Troubleshooting](../RUNPOD_WEB_SERVER_FIX.md)
+- [Quick Reference](../RUNPOD_QUICK_REFERENCE.md)
+
+---
+
+## 📚 Resources
+
+### Documentation
+
+- **Main README**: [../README.md](../README.md)
+- **Backend Guide**: [backend/README.md](./backend/README.md)
+- **Frontend Guide**: [frontend/README.md](./frontend/README.md)
+- **RunPod Guide**: [../RUNPOD_DEPLOYMENT_README.md](../RUNPOD_DEPLOYMENT_README.md)
+- **Scripts Guide**: [../scripts/README.md](../scripts/README.md)
+
+### API Documentation
+
+- **API Reference**: [../API_REFERENCE.md](../API_REFERENCE.md)
+- **Scientific APIs**: [SCIENTIFIC_API_REFERENCE.md](./SCIENTIFIC_API_REFERENCE.md)
+- **Integration Guide**: [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md)
+
+### External Links
+
+- **GitHub**: [galion-studio/nexuslang-v2](https://github.com/galion-studio/nexuslang-v2)
+- **Website**: [galion.studio](https://galion.studio)
+- **API Docs**: [docs.galion.studio](https://docs.galion.studio)
+
+### Community
+
+- **Issues**: [GitHub Issues](https://github.com/galion-studio/nexuslang-v2/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/galion-studio/nexuslang-v2/discussions)
+- **Email**: support@galion.studio
+
+---
+
+## 🗺️ Next Steps
+
+### For New Users
+
+1. ✅ Read this document
+2. ✅ Try the [Quick Start](#quick-start-guides)
+3. ✅ Explore the [Web Interface](https://galion.studio)
+4. ✅ Read [API Documentation](../API_REFERENCE.md)
+5. ✅ Join our community
+
+### For Developers
+
+1. ✅ Set up [local environment](#for-developers)
+2. ✅ Read [Backend README](./backend/README.md)
+3. ✅ Read [Frontend README](./frontend/README.md)
+4. ✅ Explore the codebase
+5. ✅ Make your first contribution
+
+### For DevOps
+
+1. ✅ Review [deployment options](#deployment-options)
+2. ✅ Choose deployment platform
+3. ✅ Follow deployment guide
+4. ✅ Set up monitoring
+5. ✅ Configure backups
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](../LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- OpenAI for GPT-4 API
+- FastAPI team
+- Next.js team
+- RunPod for GPU hosting
+- All our contributors
+
+---
+
+## 📞 Support
 
 ### Get Help
-- **Documentation:** https://developer.galion.app/docs
-- **API Docs:** https://api.developer.galion.app/docs
-- **GitHub Issues:** Report bugs
-- **Email:** support@galion.app
 
-### Stay Updated
-- **Blog:** https://blog.galion.app
-- **Twitter:** @galion_studio
-- **Discord:** Join our community
-- **Newsletter:** Subscribe for updates
+- 📖 **Documentation**: Start with relevant README
+- 🐛 **Issues**: [GitHub Issues](https://github.com/galion-studio/nexuslang-v2/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/galion-studio/nexuslang-v2/discussions)
+- 📧 **Email**: support@galion.studio
 
----
+### Report Security Issues
 
-## ­čĆć Achievements
-
-### Technical
-- Ôťů First AI language with binary compilation
-- Ôťů First with personality system
-- Ôťů First with native knowledge integration
-- Ôťů Complete platform (language + IDE + API)
-- Ôťů Production-ready in 6 hours
-
-### Quality
-- Ôťů 12,000+ lines of clean code
-- Ôťů Comprehensive documentation
-- Ôťů Professional UI/UX
-- Ôťů Working examples
-- Ôťů Test coverage
+**Email**: security@galion.studio  
+**Do not** create public issues for security vulnerabilities.
 
 ---
 
-## ­čôť License
+## ✅ Documentation Checklist
 
-Open Source - See [LICENSE](../LICENSE) for details
+When adding new features, update:
 
----
-
-## ­čÖĆ Acknowledgments
-
-**Built with:**
-- First principles thinking
-- User-first design
-- Open source community
-- Passion for innovation
-
-**Inspired by:**
-- The need for AI-optimized languages
-- Complexity of current AI development
-- Vision for better developer experience
+- [ ] This master README (if needed)
+- [ ] Component-specific README
+- [ ] API documentation
+- [ ] Integration guide
+- [ ] Deployment guides (if needed)
+- [ ] Troubleshooting sections
+- [ ] Code comments
+- [ ] Tests
 
 ---
 
-## ­čÄŐ Version History
+**Built with ❤️ by the Galion Studio team**
 
-### v2.0.0-beta (November 11, 2025)
-- Ôťů Core language implementation
-- Ôťů Binary compiler
-- Ôťů Web IDE
-- Ôťů Backend API
-- Ôťů 12 example programs
-- Ôťů Complete documentation
-- Ôťů RunPod deployment
-
-### v1.0.0 (Previous)
-- Basic language features
-- CLI only
-- Limited functionality
+**Version**: 2.0.0  
+**Last Updated**: November 14, 2025  
 
 ---
 
-## ­čÜÇ Quick Links
+## 🔗 Quick Links
 
-- **Platform:** https://developer.galion.app
-- **IDE:** https://developer.galion.app/ide
-- **API:** https://api.developer.galion.app
-- **Docs:** https://api.developer.galion.app/docs
-- **GitHub:** https://github.com/galion-studio/project-nexus
-- **Website:** https://galion.app
-
----
-
-## ­čÄ» For Developers
-
-### Clone and Run
-```bash
-git clone https://github.com/galion-studio/project-nexus.git
-cd project-nexus/v2/nexuslang
-pip install -e .
-nexus run examples/10_complete_ai_assistant.nx
-```
-
-### Contribute
-1. Fork the repository
-2. Create feature branch
-3. Make your changes
-4. Submit pull request
-
-### Report Issues
-- GitHub Issues for bugs
-- Feature requests welcome
-- Security issues: security@galion.app
+| What You Need | Where to Go |
+|---------------|-------------|
+| **Start developing** | [Backend README](./backend/README.md) \| [Frontend README](./frontend/README.md) |
+| **Deploy to RunPod** | [RunPod SSH Instructions](../RUNPOD_SSH_INSTRUCTIONS.md) |
+| **Use the API** | [API Reference](../API_REFERENCE.md) |
+| **Scientific features** | [Scientific Knowledge README](./SCIENTIFIC_KNOWLEDGE_README.md) |
+| **Troubleshooting** | [RunPod Troubleshooting](../RUNPOD_WEB_SERVER_FIX.md) |
+| **Quick commands** | [Quick Reference](../RUNPOD_QUICK_REFERENCE.md) |
+| **Integration** | [Integration Guide](./INTEGRATION_GUIDE.md) |
+| **Scripts** | [Scripts README](../scripts/README.md) |
 
 ---
 
-## ­čôľ Learn NexusLang
-
-### Beginner Path
-1. Try the Web IDE
-2. Run the 12 examples
-3. Read Getting Started guide
-4. Build your first project
-
-### Advanced Path
-1. Study the language implementation
-2. Read API documentation
-3. Contribute to core
-4. Build extensions
-
----
-
-**­čÜÇ Start building the future of AI development with NexusLang v2!**
-
-**Try it now:** https://developer.galion.app/ide
-
----
-
-_Built with first principles. Designed for the 22nd century. Open for everyone._
-
-**#NexusLang #AI #Programming #Innovation #OpenSource**
-
----
-
-**Version:** 2.0.0-beta  
-**Release Date:** November 11, 2025  
-**Status:** Alpha - Active Development  
-**Platform:** Running on RunPod  
-
-┬ę 2025 Galion Studio. All rights reserved.
-
+🎉 **Everything you need is documented. Choose your path and start building!**

@@ -1,0 +1,16 @@
+[Unit]
+Description=Galion Nexus Lang V2 Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/workspace/project-nexus/v2/backend
+Environment=PYTHONPATH=/workspace/project-nexus:/workspace/project-nexus/v2
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/local/bin/python -m uvicorn main_simple:app --host 0.0.0.0 --port 8080 --workers 1 --log-level info --access-log
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

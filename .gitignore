@@ -1,0 +1,118 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+/workspace/logs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+production.env
+runpod.env
+production-config.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3
+
+# Secrets & Keys
+*.pem
+*.key
+*.cert
+secrets/
+.secrets/
+
+# Media & Uploads
+media/
+uploads/
+static/uploads/
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend build
+v2/frontend/.next/
+v2/frontend/out/
+v2/frontend/build/
+v2/frontend/dist/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+test_*.db
+
+# OS Files
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Compiled files
+*.pyc
+*.pyo
+*.class
+*.o
+*.a
+
+# Docker
+*.pid
+docker-compose.override.yml
+
+# Misc
+.cache/
+*.swp
+.ipynb_checkpoints/
+

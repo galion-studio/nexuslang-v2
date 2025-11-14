@@ -1041,3 +1041,6 @@ class AgentOrchestrator:
         """Detailed representation"""
         return f"AgentOrchestrator(agents={list(self.agents.keys())}, metrics={self.metrics.get_summary()})"
 
+
+# Create global orchestrator instance
+orchestrator = AgentOrchestrator()

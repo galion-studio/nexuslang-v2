@@ -1,0 +1,214 @@
+================================================================================
+🚀 RUNPOD DEPLOYMENT - COPY & PASTE COMMANDS
+================================================================================
+
+▼▼▼ COPY EVERYTHING BELOW THIS LINE AND PASTE INTO RUNPOD SSH TERMINAL ▼▼▼
+
+
+# ============================================================================
+# Automated RunPod Deployment for Galion Studio / Project Nexus
+# ============================================================================
+
+echo "🚀 Starting automated deployment from GitHub..."
+echo ""
+
+# Navigate to workspace
+cd /workspace
+
+# Remove old installation if exists
+if [ -d "project-nexus" ]; then
+    echo "⚠️  Found existing installation. Updating..."
+    cd project-nexus
+    git pull origin clean-nexuslang
+else
+    echo "📥 Cloning repository from GitHub..."
+    git clone https://github.com/galion-studio/nexuslang-v2.git project-nexus
+    cd project-nexus
+    git checkout clean-nexuslang
+fi
+
+echo ""
+echo "✅ Repository ready!"
+echo ""
+
+# Make scripts executable
+echo "🔧 Making scripts executable..."
+chmod +x runpod-diagnose-and-fix.sh
+chmod +x runpod-start-simple.sh
+chmod +x runpod-start-server.sh
+
+echo ""
+echo "============================================================================"
+echo "🎯 DEPLOYMENT OPTIONS"
+echo "============================================================================"
+echo ""
+echo "Choose your deployment method:"
+echo ""
+echo "Option 1 (RECOMMENDED): Automated diagnostic and deployment"
+echo "  ./runpod-diagnose-and-fix.sh"
+echo ""
+echo "Option 2: Simple, reliable server"
+echo "  ./runpod-start-simple.sh"
+echo ""
+echo "Option 3: Full-featured server with all modules"
+echo "  ./runpod-start-server.sh"
+echo ""
+echo "============================================================================"
+echo ""
+
+# Ask user to choose (or auto-run option 1)
+read -p "Press Enter to run Option 1 (automated), or Ctrl+C to choose manually: "
+
+echo ""
+echo "🚀 Running automated deployment..."
+echo ""
+
+# Run the automated diagnostic and fix script
+./runpod-diagnose-and-fix.sh
+
+echo ""
+echo "============================================================================"
+echo "✅ DEPLOYMENT COMPLETE!"
+echo "============================================================================"
+echo ""
+echo "📝 NEXT STEPS:"
+echo ""
+echo "1. Note your public IP shown above"
+echo "2. Go to Cloudflare Dashboard: https://dash.cloudflare.com"
+echo "3. Select galion.studio domain → DNS"
+echo "4. Add A record: @ → YOUR_PUBLIC_IP (Proxy ON)"
+echo "5. Add A record: www → YOUR_PUBLIC_IP (Proxy ON)"
+echo "6. SSL/TLS → Set to 'Flexible'"
+echo "7. Wait 2 minutes, then visit: https://galion.studio/health"
+echo ""
+echo "============================================================================"
+
+
+▲▲▲ COPY EVERYTHING ABOVE THIS LINE ▲▲▲
+
+================================================================================
+ALTERNATIVE: ULTRA-FAST ONE-LINER (No Prompts)
+================================================================================
+
+Copy this single command for instant deployment:
+
+cd /workspace && rm -rf project-nexus && git clone https://github.com/galion-studio/nexuslang-v2.git project-nexus && cd project-nexus && git checkout clean-nexuslang && chmod +x runpod-diagnose-and-fix.sh && ./runpod-diagnose-and-fix.sh
+
+
+================================================================================
+ALTERNATIVE: SIMPLE SERVER ONLY (Most Reliable)
+================================================================================
+
+cd /workspace && rm -rf project-nexus && git clone https://github.com/galion-studio/nexuslang-v2.git project-nexus && cd project-nexus && git checkout clean-nexuslang && chmod +x runpod-start-simple.sh && ./runpod-start-simple.sh
+
+
+================================================================================
+MONITORING COMMANDS (After Deployment)
+================================================================================
+
+# Check server status
+curl http://localhost:8080/health
+
+# View live logs
+tail -f /workspace/logs/galion-backend.log
+
+# Check process
+ps aux | grep uvicorn
+
+# Get public IP
+curl ifconfig.me
+
+# Stop server
+pkill -f uvicorn
+
+# Restart server
+cd /workspace/project-nexus && ./runpod-start-simple.sh
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+If something goes wrong, run:
+
+cd /workspace/project-nexus && ./runpod-diagnose-and-fix.sh
+
+
+To view the error log:
+
+tail -50 /workspace/logs/galion-backend.log
+
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+All documentation is in your GitHub repository:
+
+- RUNPOD_SSH_INSTRUCTIONS.md - Complete deployment guide
+- RUNPOD_DEPLOYMENT_README.md - Full documentation
+- RUNPOD_WEB_SERVER_FIX.md - Troubleshooting guide
+- RUNPOD_QUICK_REFERENCE.md - Quick reference
+
+View them on GitHub or read locally:
+cd /workspace/project-nexus
+cat RUNPOD_QUICK_REFERENCE.md
+
+
+================================================================================
+CLOUDFLARE CONFIGURATION (After Server is Running)
+================================================================================
+
+1. Get your RunPod public IP:
+   curl ifconfig.me
+
+2. Go to Cloudflare Dashboard
+3. Select domain: galion.studio
+4. Go to DNS section
+5. Add these records:
+
+   Record 1:
+   - Type: A
+   - Name: @
+   - Content: [YOUR_RUNPOD_IP]
+   - Proxy: ON (orange cloud)
+
+   Record 2:
+   - Type: A
+   - Name: www
+   - Content: [YOUR_RUNPOD_IP]
+   - Proxy: ON (orange cloud)
+
+6. Go to SSL/TLS → Set to "Flexible"
+7. Wait 2-3 minutes
+8. Test: https://galion.studio/health
+
+
+================================================================================
+SUCCESS INDICATORS
+================================================================================
+
+Your deployment is successful when:
+
+✅ curl http://localhost:8080/health returns {"status":"healthy"}
+✅ ps aux | grep uvicorn shows running process
+✅ curl http://YOUR_IP:8080/health works
+✅ https://galion.studio/health works (after Cloudflare)
+✅ No errors in logs
+
+
+================================================================================
+REPOSITORY INFORMATION
+================================================================================
+
+Repository: https://github.com/galion-studio/nexuslang-v2
+Branch: clean-nexuslang
+Last Updated: November 14, 2025
+
+
+================================================================================
+🎉 READY TO DEPLOY!
+================================================================================
+
+Choose one of the commands above and paste it into your RunPod SSH terminal!
+

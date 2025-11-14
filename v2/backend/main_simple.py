@@ -280,7 +280,7 @@ async def basic_query(request: QueryRequest):
 
 try:
     from api.grokopedia import router as grokopedia_router
-    app.include_router(grokopedia_router, prefix="/api/v1", tags=["grokopedia"])
+    app.include_router(grokopedia_router, prefix="/api/v1/grokopedia", tags=["grokopedia"])
     logger.info("Grokopedia router loaded successfully")
 except Exception as e:
     logger.warning(f"Could not load Grokopedia router: {e}")

@@ -35,7 +35,7 @@ def setup_monitoring(app):
             process_time = time.time() - start_time
             status_code = response.status_code
 
-            logger.info(".3f"
+            logger.info(f"{method} {url.path} - {status_code} - {process_time:.3f}s")
             # In production, this would record Prometheus metrics
             # request_count.labels(method=method, endpoint=url.path, status=status_code).inc()
             # request_duration.labels(method=method, endpoint=url.path).observe(process_time)

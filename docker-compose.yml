@@ -11,7 +11,7 @@ services:
       dockerfile: Dockerfile
     container_name: galion-app
     ports:
-      - "3010:3000"  # Changed from 3100 to 3010
+      - "3000:3000"  # Galion app port
     environment:
       - NEXT_PUBLIC_API_URL=http://backend:8010
       - NEXT_PUBLIC_VOICE_API_URL=http://backend:8010/voice

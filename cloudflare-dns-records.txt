@@ -1,0 +1,96 @@
+# ============================================
+# Cloudflare DNS Records for Galion Platform
+# ============================================
+# Copy these exact values into Cloudflare Dashboard
+# Domain: galion.studio
+# RunPod IP: 213.173.105.83
+
+# ============================================
+# RECORD 1: Main Domain
+# ============================================
+Type: A
+Name: @
+IPv4 address: 213.173.105.83
+Proxy status: Proxied (click to enable orange cloud)
+TTL: Auto
+Priority: N/A
+
+# ============================================
+# RECORD 2: WWW Subdomain
+# ============================================
+Type: CNAME
+Name: www
+Target: galion.studio
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+
+# ============================================
+# RECORD 3: API Subdomain
+# ============================================
+Type: CNAME
+Name: api
+Target: galion.studio
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+Comment: Backend API - port 8000
+
+# ============================================
+# RECORD 4: Studio Subdomain
+# ============================================
+Type: CNAME
+Name: studio
+Target: galion.studio
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+Comment: Corporate Website - port 3030
+
+# ============================================
+# RECORD 5: App Subdomain
+# ============================================
+Type: CNAME
+Name: app
+Target: galion.studio
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+Comment: Voice-First App - port 3000
+
+# ============================================
+# RECORD 6: Dev Subdomain
+# ============================================
+Type: CNAME
+Name: dev
+Target: galion.studio
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+Comment: Developer Platform IDE - port 3003
+
+# ============================================
+# OPTIONAL: Additional Subdomains
+# ============================================
+
+# Developer subdomain (alias for dev)
+Type: CNAME
+Name: developer
+Target: galion.studio
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+
+# Status page (if using monitoring)
+Type: CNAME
+Name: status
+Target: stats.uptimerobot.com
+Proxy status: DNS only (grey cloud)
+TTL: Auto
+
+# ============================================
+# VERIFICATION
+# ============================================
+# After adding records, test with:
+#   nslookup api.galion.studio
+#   nslookup studio.galion.studio
+#   nslookup app.galion.studio
+#   nslookup dev.galion.studio
+#
+# All should resolve to Cloudflare IPs (104.x.x.x or 172.x.x.x)
+# NOT your direct IP 213.173.105.83 (that means proxy is working)
+

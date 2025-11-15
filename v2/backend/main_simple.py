@@ -58,13 +58,41 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS - allow all origins for development
+# Configure CORS - allow all origins and subdomains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        # Local development
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "http://localhost:3030",
+        # Production subdomains
+        "https://api.galion.studio",
+        "https://studio.galion.studio",
+        "https://app.galion.studio",
+        "https://dev.galion.studio",
+        "https://developer.galion.studio",
+        "https://galion.studio",
+        "https://www.galion.studio",
+        # HTTP versions (for development)
+        "http://api.galion.studio",
+        "http://studio.galion.studio",
+        "http://app.galion.studio",
+        "http://dev.galion.studio",
+        # RunPod direct access
+        "http://213.173.105.83:3000",
+        "http://213.173.105.83:3001",
+        "http://213.173.105.83:3003",
+        "http://213.173.105.83:3030",
+        # Wildcard for any subdomain (development)
+        "*",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Pydantic Models

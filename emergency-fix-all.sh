@@ -4,6 +4,23 @@
 echo "🚨 EMERGENCY FIX - GALION PLATFORM"
 echo "=================================="
 
+# 0. CHECK AND INSTALL ALL DEPENDENCIES FIRST
+echo ""
+echo "0. Checking and installing dependencies..."
+
+# Download and run dependency checker if it doesn't exist
+if [ ! -f "check-and-install-deps.sh" ]; then
+    wget -q -O check-and-install-deps.sh https://raw.githubusercontent.com/galion-studio/nexuslang-v2/clean-nexuslang/check-and-install-deps.sh
+    chmod +x check-and-install-deps.sh
+fi
+
+# Run dependency checker
+./check-and-install-deps.sh
+
+echo ""
+echo "✅ Dependencies checked and installed"
+echo ""
+
 # 1. COMPLETELY RESET NGINX
 echo ""
 echo "1. Resetting nginx configuration..."

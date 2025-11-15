@@ -68,7 +68,8 @@ app.add_middleware(
         "http://localhost:3002",
         "http://localhost:3003",
         "http://localhost:3030",
-        # Production subdomains
+
+        # galion.studio domains
         "https://api.galion.studio",
         "https://studio.galion.studio",
         "https://app.galion.studio",
@@ -76,16 +77,33 @@ app.add_middleware(
         "https://developer.galion.studio",
         "https://galion.studio",
         "https://www.galion.studio",
+
+        # galion.app domains
+        "https://galion.app",
+        "https://www.galion.app",
+        "https://api.galion.app",
+        "https://studio.galion.app",
+        "https://dev.galion.app",
+
         # HTTP versions (for development)
         "http://api.galion.studio",
         "http://studio.galion.studio",
         "http://app.galion.studio",
         "http://dev.galion.studio",
+        "http://galion.studio",
+        "http://www.galion.studio",
+        "http://galion.app",
+        "http://www.galion.app",
+        "http://api.galion.app",
+        "http://studio.galion.app",
+        "http://dev.galion.app",
+
         # RunPod direct access
         "http://213.173.105.83:3000",
         "http://213.173.105.83:3001",
         "http://213.173.105.83:3003",
         "http://213.173.105.83:3030",
+
         # Wildcard for any subdomain (development)
         "*",
     ],

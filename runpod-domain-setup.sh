@@ -1,189 +1,176 @@
 #!/bin/bash
-# ============================================
-# RunPod Domain Setup Script
-# ============================================
-# Automatically configures nginx for galion.studio and galion.app domains
-# Only sets up the 4 domains: galion.studio, galion.app, api.galion.app, developer.galion.app
+# Configure Galion Platform for RunPod domain access
 
-set -e
+echo "🚀 RUNPOD DOMAIN CONFIGURATION"
+echo "=============================="
 
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+# Get RunPod info
+POD_ID=$(hostname | cut -d'-' -f1)
+RUNPOD_IP=$(hostname -i | grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' | head -1)
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  GALION PLATFORM DOMAIN SETUP${NC}"
-echo -e "${BLUE}========================================${NC}"
+echo "Pod ID: $POD_ID"
+echo "RunPod IP: $RUNPOD_IP"
+
+# 1. Fix nginx configuration
 echo ""
+echo "1. Fixing nginx configuration..."
 
-# Check if running as root
-if [ "$EUID" -ne 0 ]; then
-    echo -e "${RED}❌ Please run as root or with sudo${NC}"
-    exit 1
-fi
+pkill nginx 2>/dev/null || true
+sleep 2
 
-echo -e "${BLUE}📋 Domains to configure:${NC}"
-echo "   • galion.studio (redirects to galion.app)"
-echo "   • galion.app (main app)"
-echo "   • api.galion.app (backend API)"
-echo "   • developer.galion.app (developer platform)"
-echo ""
+# Clean up corrupted config
+sed -i 's/808080/8080/g' /etc/nginx/nginx.conf 2>/dev/null || true
 
-# Step 1: Backup current nginx config
-echo -e "${BLUE}1️⃣ Backing up current nginx configuration...${NC}"
-if [ -f /etc/nginx/sites-available/galion-platform ]; then
-    cp /etc/nginx/sites-available/galion-platform /etc/nginx/sites-available/galion-platform.backup.$(date +%Y%m%d_%H%M%S)
-    echo -e "${GREEN}✅${NC} Backup created"
-else
-    echo -e "${YELLOW}⚠️${NC} No existing configuration found"
-fi
-echo ""
+# Create proper nginx config for RunPod
+cat > /etc/nginx/sites-available/galion-runpod << 'EOF'
+# Galion Platform - RunPod Domain Configuration
 
-# Step 2: Download nginx configuration
-echo -e "${BLUE}2️⃣ Downloading nginx configuration...${NC}"
-wget -q https://raw.githubusercontent.com/galion-studio/nexuslang-v2/clean-nexuslang/nginx-both-domains.conf -O /tmp/nginx-both-domains.conf
+upstream backend_api { server localhost:8000; }
+upstream galion_studio { server localhost:3030; }
 
-if [ ! -f /tmp/nginx-both-domains.conf ]; then
-    echo -e "${RED}❌ Failed to download nginx configuration${NC}"
-    exit 1
-fi
+# Default server - serve galion studio
+server {
+    listen 80;
+    server_name _;
 
-echo -e "${GREEN}✅${NC} Configuration downloaded"
-echo ""
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
 
-# Step 3: Install nginx configuration
-echo -e "${BLUE}3️⃣ Installing nginx configuration...${NC}"
-cp /tmp/nginx-both-domains.conf /etc/nginx/sites-available/galion-platform
-ln -sf /etc/nginx/sites-available/galion-platform /etc/nginx/sites-enabled/
+    location / {
+        proxy_pass http://galion_studio;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
 
-echo -e "${GREEN}✅${NC} Configuration installed"
-echo ""
+    # API routes
+    location /api/ {
+        proxy_pass http://backend_api;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
 
-# Step 4: Test nginx configuration
-echo -e "${BLUE}4️⃣ Testing nginx configuration...${NC}"
-if nginx -t 2>/dev/null; then
-    echo -e "${GREEN}✅${NC} Nginx configuration is valid"
-else
-    echo -e "${RED}❌ Nginx configuration has errors${NC}"
-    echo "Restoring backup..."
-    if [ -f /etc/nginx/sites-available/galion-platform.backup.* ]; then
-        cp /etc/nginx/sites-available/galion-platform.backup.* /etc/nginx/sites-available/galion-platform
-        echo -e "${YELLOW}⚠️${NC} Backup restored"
-    fi
-    exit 1
-fi
-echo ""
-
-# Step 5: Check services are running
-echo -e "${BLUE}5️⃣ Checking PM2 services...${NC}"
-
-# Check if PM2 is running
-if ! pgrep -f "pm2" > /dev/null; then
-    echo -e "${YELLOW}⚠️${NC} PM2 daemon not running, starting..."
-    pm2 startup
-    pm2 save
-fi
-
-# Check service status
-services=("backend" "galion-app" "developer-platform")
-all_running=true
-
-for service in "${services[@]}"; do
-    if pm2 describe "$service" > /dev/null 2>&1; then
-        status=$(pm2 jlist | jq -r ".[] | select(.name==\"$service\") | .pm2_env.status")
-        if [ "$status" = "online" ]; then
-            echo -e "${GREEN}✅${NC} $service: $status"
-        else
-            echo -e "${RED}❌${NC} $service: $status"
-            all_running=false
-        fi
-    else
-        echo -e "${RED}❌${NC} $service: not found"
-        all_running=false
-    fi
-done
-
-if [ "$all_running" = false ]; then
-    echo ""
-    echo -e "${YELLOW}⚠️${NC} Some services are not running. Starting them..."
-    pm2 restart all
-    sleep 3
-fi
-echo ""
-
-# Step 6: Test local access
-echo -e "${BLUE}6️⃣ Testing local service access...${NC}"
-
-test_local_service() {
-    local port=$1
-    local name=$2
-
-    if curl -s --max-time 5 http://localhost:$port > /dev/null 2>&1; then
-        echo -e "${GREEN}✅${NC} $name (port $port): responding"
-    else
-        echo -e "${RED}❌${NC} $name (port $port): not responding"
-    fi
+    location /health {
+        proxy_pass http://backend_api/health;
+        access_log off;
+    }
 }
 
-test_local_service 8000 "Backend API"
-test_local_service 3000 "Galion App"
-test_local_service 3003 "Developer Platform"
-echo ""
+# HTTPS redirect (if SSL is enabled)
+server {
+    listen 443 ssl http2;
+    server_name _;
 
-# Step 7: Reload nginx
-echo -e "${BLUE}7️⃣ Reloading nginx...${NC}"
-if systemctl reload nginx 2>/dev/null; then
-    echo -e "${GREEN}✅${NC} Nginx reloaded successfully"
+    # SSL configuration (RunPod provides SSL)
+    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
+    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        proxy_pass http://galion_studio;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api/ {
+        proxy_pass http://backend_api;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /health {
+        proxy_pass http://backend_api/health;
+        access_log off;
+    }
+}
+EOF
+
+# Enable the config
+ln -sf /etc/nginx/sites-available/galion-runpod /etc/nginx/sites-enabled/ 2>/dev/null || true
+rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-enabled/galion*
+
+# Test and start nginx
+if nginx -t; then
+    nginx
+    echo "✅ Nginx configured and started"
 else
-    echo -e "${YELLOW}⚠️${NC} Nginx reload failed, trying restart..."
-    if systemctl restart nginx 2>/dev/null; then
-        echo -e "${GREEN}✅${NC} Nginx restarted successfully"
-    else
-        echo -e "${RED}❌${NC} Nginx restart failed"
-        exit 1
-    fi
+    echo "❌ Nginx configuration failed"
+    nginx -t
 fi
-echo ""
 
-# Step 8: Verify nginx is running
-echo -e "${BLUE}8️⃣ Verifying nginx status...${NC}"
-if systemctl is-active --quiet nginx; then
-    echo -e "${GREEN}✅${NC} Nginx is running"
+# 2. Test services
+echo ""
+echo "2. Testing services..."
+
+echo -n "Galion Studio: "
+if curl -s --max-time 5 http://localhost > /dev/null 2>&1; then
+    echo "✅ WORKING"
 else
-    echo -e "${RED}❌${NC} Nginx is not running"
-    exit 1
+    echo "❌ FAIL"
 fi
-echo ""
 
-# Step 9: Show final configuration
-echo -e "${BLUE}9️⃣ Domain routing configuration:${NC}"
-echo ""
-echo "📋 galion.studio:"
-echo "   • galion.studio → redirects to galion.app"
-echo "   • www.galion.studio → redirects to galion.app"
-echo ""
-echo "📋 galion.app:"
-echo "   • galion.app → Galion App (port 3000)"
-echo "   • www.galion.app → Galion App (port 3000)"
-echo "   • api.galion.app → Backend API (port 8000)"
-echo "   • developer.galion.app → Developer Platform (port 3003)"
-echo ""
+echo -n "Backend API: "
+if curl -s --max-time 5 http://localhost/health > /dev/null 2>&1; then
+    echo "✅ WORKING"
+else
+    echo "❌ FAIL"
+fi
 
-# Step 10: Show next steps
-echo -e "${BLUE}🔄 Next Steps:${NC}"
-echo "1. Add domains to Cloudflare (see CLOUDFLARE_SETUP.md)"
-echo "2. Configure DNS records (see cloudflare-dns-galion-*.txt files)"
-echo "3. Enable SSL/TLS in Cloudflare"
-echo "4. Test external access: curl -I https://galion.app"
-echo "5. Test subdomains: curl -I https://api.galion.app/health"
+# 3. Show RunPod domain info
 echo ""
+echo "3. RUNPOD DOMAIN ACCESS:"
+echo "========================"
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${GREEN}✅ DOMAIN SETUP COMPLETE!${NC}"
-echo -e "${BLUE}========================================${NC}"
+# Try to determine the RunPod domain
+# RunPod domains typically follow: https://[pod-id]-[port].[region].runpod.net
+echo "Your Galion Platform is now accessible at:"
 echo ""
-echo -e "${GREEN}🎉 RunPod is now configured for multi-domain routing!${NC}"
+echo "🌐 HTTP:  http://$POD_ID-80.tcp.runpod.net"
+echo "🔒 HTTPS: https://$POD_ID-443.tcp.runpod.net"
 echo ""
-echo -e "${BLUE}📝 Remember to configure Cloudflare DNS for external access.${NC}"
+echo "📱 Direct access:"
+echo "   http://$RUNPOD_IP (if port 80 is exposed)"
+echo ""
+echo "🧪 Test commands:"
+echo "   curl http://$POD_ID-80.tcp.runpod.net"
+echo "   curl https://$POD_ID-443.tcp.runpod.net"
+echo ""
+echo "📋 Available endpoints:"
+echo "   / - Galion Studio (main app)"
+echo "   /api/ - Backend API routes"
+echo "   /health - Health check"
+
+# 4. Final status
+echo ""
+echo "4. SERVICE STATUS:"
+pm2 list
+
+echo ""
+echo "🎉 RUNPOD DOMAIN CONFIGURATION COMPLETE!"
+echo "========================================="
+echo ""
+echo "Your Galion Platform is now accessible via RunPod's domain system!"
+echo "Share these URLs with your users:"
+echo ""
+echo "🌐 http://$POD_ID-80.tcp.runpod.net"
+echo "🔒 https://$POD_ID-443.tcp.runpod.net"

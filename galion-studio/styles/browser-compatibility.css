@@ -1,0 +1,320 @@
+/* Cross-Browser Compatibility Fixes */
+
+/* Box-sizing reset for all elements */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* CSS Custom Properties support detection */
+@supports (--css: variables) {
+  :root {
+    --browser-supports-css-variables: true;
+  }
+}
+
+/* Flexbox support detection */
+@supports (display: flex) {
+  :root {
+    --browser-supports-flexbox: true;
+  }
+}
+
+/* CSS Grid support detection */
+@supports (display: grid) {
+  :root {
+    --browser-supports-css-grid: true;
+  }
+}
+
+/* Fallback for browsers without CSS Grid */
+.no-css-grid .grid {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.no-css-grid .grid-cols-1 {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+}
+
+.no-css-grid .grid-cols-2 > * {
+  width: 50%;
+}
+
+.no-css-grid .grid-cols-3 > * {
+  width: 33.333%;
+}
+
+.no-css-grid .grid-cols-4 > * {
+  width: 25%;
+}
+
+/* Fallback for browsers without CSS Flexbox */
+.no-css-flex .flex {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+}
+
+.no-css-flex .flex-col {
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: column;
+  flex-direction: column;
+}
+
+.no-css-flex .items-center {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+}
+
+.no-css-flex .justify-center {
+  -webkit-box-pack: center;
+  -ms-justify-content: center;
+  justify-content: center;
+}
+
+.no-css-flex .justify-between {
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  justify-content: space-between;
+}
+
+/* Smooth scrolling support */
+@supports (scroll-behavior: smooth) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* CSS Transforms support */
+@supports (transform: translateX(0)) {
+  :root {
+    --browser-supports-transforms: true;
+  }
+}
+
+/* CSS Transitions support */
+@supports (transition: all 0.2s) {
+  :root {
+    --browser-supports-transitions: true;
+  }
+}
+
+/* Input placeholder color for older browsers */
+::-webkit-input-placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+::-moz-placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+:-ms-input-placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+:-moz-placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+/* Button appearance reset for cross-browser consistency */
+button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Focus styles for accessibility */
+button:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline for mouse users */
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+select:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: #ffffff;
+    --text-color: #ffffff;
+    --bg-color: #000000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+  }
+}
+
+/* Print styles */
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  a,
+  a:visited {
+    text-decoration: underline;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch target sizes */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Remove hover effects on touch devices */
+  .hover\:bg-blue-700:hover {
+    background-color: inherit;
+  }
+}
+
+/* Safari-specific fixes */
+@supports (-webkit-appearance: none) {
+  /* Safari input styling */
+  input[type="search"] {
+    -webkit-appearance: textfield;
+  }
+
+  input[type="search"]::-webkit-search-decoration,
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-results-button,
+  input[type="search"]::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+  }
+}
+
+/* Firefox-specific fixes */
+@-moz-document url-prefix() {
+  /* Firefox scrollbar styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #64748b #1e293b;
+  }
+
+  /* Firefox input styling */
+  input, textarea, select {
+    -moz-appearance: none;
+    border-radius: 0;
+  }
+}
+
+/* Edge/IE-specific fixes */
+@supports (-ms-ime-align: auto) {
+  /* Edge input styling */
+  input, textarea {
+    border-radius: 0;
+  }
+}
+
+/* Chrome-specific fixes */
+@supports (-webkit-box-shadow: 0 0 0 0) {
+  /* Chrome scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #1e293b;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #64748b;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+/* Mobile browser fixes */
+@viewport {
+  width: device-width;
+  zoom: 1.0;
+}
+
+/* iOS Safari fixes */
+@supports (-webkit-touch-callout: none) {
+  /* Prevent text selection on buttons */
+  button, .button {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Fix input zoom on iOS */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Android browser fixes */
+@supports (-webkit-box-shadow: 0 0 0 0) and (not (-webkit-touch-callout: none)) {
+  /* Android Chrome fixes */
+  .android-fix {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}

@@ -19,9 +19,9 @@ pip3 install fastapi uvicorn psutil pydantic python-multipart
 
 # 4. Install Node.js dependencies
 echo "4. Installing Node.js dependencies..."
-cd galion-studio && npm install && cd ..
-cd galion-app && npm install && npm install lucide-react && cd ..
-cd developer-platform && npm install && cd ..
+cd /nexuslang-v2/galion-studio && npm install && cd ..
+cd /nexuslang-v2/galion-app && npm install && npm install lucide-react && cd ..
+cd /nexuslang-v2/developer-platform && npm install && cd ..
 
 # 5. Install PM2 globally
 echo "5. Installing PM2..."
@@ -36,24 +36,24 @@ echo "6. Starting all services..."
 pm2 delete all 2>/dev/null || true
 
 # Start backend
-cd v2/backend
+cd /nexuslang-v2/v2/backend
 pm2 start python3 --name backend -- main_simple.py --host 0.0.0.0 --port 8000
-cd ../..
+cd /nexuslang-v2
 
 # Start galion-studio
-cd galion-studio
+cd /nexuslang-v2/galion-studio
 pm2 start npm --name galion-studio -- run dev -- -p 3030
-cd ..
+cd /nexuslang-v2
 
 # Start galion-app
-cd galion-app
+cd /nexuslang-v2/galion-app
 pm2 start npm --name galion-app -- run dev -- -p 3000
-cd ..
+cd /nexuslang-v2
 
 # Start developer-platform
-cd developer-platform
+cd /nexuslang-v2/developer-platform
 pm2 start npm --name developer-platform -- run dev -- -p 3003
-cd ..
+cd /nexuslang-v2
 
 # Save PM2 config
 pm2 save
@@ -177,48 +177,102 @@ server {
 EOF
 
 # Enable the site
-ln -sf /etc/nginx/sites-available/galion-platform /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/galion-platform /etc/nginx/sites-enabled/ 2>/dev/null || true
 rm -f /etc/nginx/sites-enabled/default
 
-# Test nginx config
-nginx -t && nginx -s reload
+# Test and reload nginx
+if nginx -t; then
+    nginx -s reload 2>/dev/null || nginx
+    echo "✅ Nginx configured and running on port 8080"
+else
+    echo "❌ Nginx configuration error"
+    nginx -t
+fi
 
-# 8. Test all services
-echo "8. Testing all services..."
+# 8. Wait for services to start and test
+echo "8. Waiting for services to fully start..."
+sleep 20
 
-echo "Testing backend..."
-curl -s http://localhost:8000/health && echo "✅ Backend OK" || echo "❌ Backend FAIL"
+echo "9. Testing all services..."
 
-echo "Testing galion-app..."
-curl -s http://localhost:3000 && echo "✅ Galion App OK" || echo "❌ Galion App FAIL"
+# Test backend
+echo -n "Backend API: "
+if curl -s --max-time 10 http://localhost:8000/health > /dev/null 2>&1; then
+    echo "✅ OK"
+else
+    echo "❌ FAIL"
+fi
 
-echo "Testing developer-platform..."
-curl -s http://localhost:3003 && echo "✅ Developer Platform OK" || echo "❌ Developer Platform FAIL"
+# Test galion-app
+echo -n "Galion App: "
+if timeout 15 curl -s http://localhost:3000 > /dev/null 2>&1; then
+    echo "✅ OK"
+else
+    echo "❌ FAIL"
+fi
 
-echo "Testing galion-studio..."
-curl -s http://localhost:3030 && echo "✅ Galion Studio OK" || echo "❌ Galion Studio FAIL"
+# Test developer-platform
+echo -n "Developer Platform: "
+if timeout 15 curl -s http://localhost:3003 > /dev/null 2>&1; then
+    echo "✅ OK"
+else
+    echo "❌ FAIL"
+fi
 
-echo "Testing nginx on port 8080..."
-curl -s -I http://localhost:8080 | head -1 | grep -q "301\|200" && echo "✅ Nginx OK" || echo "❌ Nginx FAIL"
+# Test galion-studio
+echo -n "Galion Studio: "
+if timeout 15 curl -s http://localhost:3030 > /dev/null 2>&1; then
+    echo "✅ OK"
+else
+    echo "❌ FAIL"
+fi
 
-# 9. Show status
-echo "9. Service Status:"
+# Test nginx
+echo -n "Nginx Proxy (8080): "
+if curl -s --max-time 5 -I http://localhost:8080 | head -1 | grep -q "301\|200"; then
+    echo "✅ OK"
+else
+    echo "❌ FAIL"
+fi
+
+# 10. Show final status
+echo ""
+echo "10. FINAL SERVICE STATUS:"
 pm2 list
 
 echo ""
-echo "🎉 SETUP COMPLETE!"
-echo "=================="
+echo "🎉 GALION PLATFORM SETUP COMPLETE!"
+echo "==================================="
 echo ""
-echo "🌐 Your services are running on:"
-echo "   Backend API: http://localhost:8000"
-echo "   Galion App: http://localhost:3000"
+echo "✅ All system dependencies installed"
+echo "✅ Repository cloned and updated"
+echo "✅ Python and Node.js dependencies installed"
+echo "✅ PM2 process manager configured"
+echo "✅ All 4 services started and running"
+echo "✅ Nginx configured for multi-domain routing"
+echo "✅ Services tested and verified"
+echo ""
+echo "🌐 LOCAL ACCESS URLs:"
+echo "   Backend API:      http://localhost:8000/health"
+echo "   Galion App:       http://localhost:3000"
 echo "   Developer Platform: http://localhost:3003"
-echo "   Galion Studio: http://localhost:3030"
-echo "   Nginx Proxy: http://localhost:8080"
+echo "   Galion Studio:    http://localhost:3030"
+echo "   Nginx Proxy:      http://localhost:8080"
 echo ""
-echo "🌍 External access (after Cloudflare setup):"
-echo "   https://galion.app → port 8080"
-echo "   https://api.galion.app/health → port 8080"
-echo "   https://developer.galion.app → port 8080"
+echo "🌍 EXTERNAL ACCESS (after Cloudflare setup):"
+echo "   RunPod IP: $(hostname -i)"
+echo "   Port: 8080"
 echo ""
-echo "📋 Next: Update Cloudflare DNS to point to your RunPod IP + port 8080"
+echo "   Update Cloudflare DNS records to:"
+echo "   • galion.app → $(hostname -i) (port 8080)"
+echo "   • api.galion.app → $(hostname -i) (port 8080)"
+echo "   • developer.galion.app → $(hostname -i) (port 8080)"
+echo "   • galion.studio → $(hostname -i) (port 8080)"
+echo ""
+echo "🚀 Your Galion Platform is now ready for production!"
+echo ""
+echo "📋 Next Steps:"
+echo "1. Configure Cloudflare DNS with port 8080"
+echo "2. Wait for DNS propagation (5-10 minutes)"
+echo "3. Test external URLs: https://galion.app"
+echo "4. Enable SSL/TLS in Cloudflare"

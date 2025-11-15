@@ -331,7 +331,7 @@ echo "=================="
 
 echo ""
 echo "📊 SERVICE STATUS:"
-pm2 status --no-interactive
+pm2 status
 
 echo ""
 echo "🌐 NGINX CONFIGURATION:"

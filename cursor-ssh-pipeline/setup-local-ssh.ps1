@@ -18,11 +18,26 @@ Write-Host "  SSH PIPELINE SETUP FOR RUNPOD" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Colors
-function Write-Success { Write-Host "✓ $args" -ForegroundColor Green }
-function Write-Error { Write-Host "✗ $args" -ForegroundColor Red }
-function Write-Info { Write-Host "ℹ $args" -ForegroundColor Blue }
-function Write-Warning { Write-Host "⚠ $args" -ForegroundColor Yellow }
+# Helper functions
+function Write-Success { 
+    param($message)
+    Write-Host "✓ $message" -ForegroundColor Green 
+}
+
+function Write-Error { 
+    param($message)
+    Write-Host "✗ $message" -ForegroundColor Red 
+}
+
+function Write-Info { 
+    param($message)
+    Write-Host "ℹ $message" -ForegroundColor Blue 
+}
+
+function Write-Warning { 
+    param($message)
+    Write-Host "⚠ $message" -ForegroundColor Yellow 
+}
 
 # Step 1: Check SSH directory
 Write-Info "Step 1: Checking SSH directory..."

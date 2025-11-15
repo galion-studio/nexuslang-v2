@@ -1,0 +1,44 @@
+# ============================================
+# Cloudflare DNS Records for galion.app
+# ============================================
+# RunPod IP: 213.173.105.83
+
+# ============================================
+# RECORD 1: Main Domain (galion.app)
+# ============================================
+Type: A
+Name: @
+IPv4 address: 213.173.105.83
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+Comment: Main Galion App - port 3000
+
+# ============================================
+# RECORD 2: WWW Subdomain
+# ============================================
+Type: CNAME
+Name: www
+Target: galion.app
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+Comment: Redirect to main app
+
+# ============================================
+# RECORD 3: API Subdomain
+# ============================================
+Type: CNAME
+Name: api
+Target: galion.app
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+Comment: Backend API - port 8000
+
+# ============================================
+# RECORD 4: Developer Subdomain
+# ============================================
+Type: CNAME
+Name: developer
+Target: galion.app
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+Comment: Developer Platform IDE - port 3003

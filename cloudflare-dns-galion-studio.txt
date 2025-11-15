@@ -1,0 +1,23 @@
+# ============================================
+# Cloudflare DNS Records for galion.studio
+# ============================================
+# RunPod IP: 213.173.105.83
+# Note: galion.studio redirects to galion.app
+
+# ============================================
+# RECORD 1: Main Domain (redirects to galion.app)
+# ============================================
+Type: A
+Name: @
+IPv4 address: 213.173.105.83
+Proxy status: Proxied (orange cloud)
+TTL: Auto
+
+# ============================================
+# RECORD 2: WWW Subdomain (redirects to galion.app)
+# ============================================
+Type: CNAME
+Name: www
+Target: galion.studio
+Proxy status: Proxied (orange cloud)
+TTL: Auto

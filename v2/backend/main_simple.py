@@ -335,7 +335,7 @@ if __name__ == "__main__":
     
     # Get configuration from environment
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", "8080"))
+    port = int(os.getenv("PORT", "8000"))
     workers = int(os.getenv("WORKERS", "2"))
     
     print(f"Starting Nexus Lang V2 Server")

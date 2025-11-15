@@ -135,7 +135,7 @@ fi
 # Start backend
 echo "   Starting backend..."
 cd v2/backend
-pm2 start "python3 main_simple.py --host 0.0.0.0 --port 8000" --name backend
+pm2 start python3 --name backend -- main_simple.py --host 0.0.0.0 --port 8000
 cd ../..
 sleep 3
 
@@ -147,7 +147,7 @@ if [ -d "galion-studio" ]; then
     # Install missing dependency
     npm install react-hot-toast --silent 2>/dev/null || true
     
-    pm2 start "npm run dev -- -p 3030 -H 0.0.0.0" --name galion-studio
+    pm2 start npm --name galion-studio -- run dev -- -p 3030 -H 0.0.0.0
     cd ..
     sleep 3
 fi

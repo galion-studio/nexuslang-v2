@@ -53,14 +53,14 @@ cd v2/backend
 # Verify backend can start
 if python3 -c "import main_simple" 2>/dev/null; then
     echo "✅ Backend imports OK"
-    pm2 start "python3 main_simple.py --host 0.0.0.0 --port 8000" --name backend
-    echo "✅ Backend started on port 8000"
 else
     echo "❌ Backend import failed - installing dependencies..."
     pip3 install -q fastapi uvicorn psutil pydantic starlette python-multipart
-    pm2 start "python3 main_simple.py --host 0.0.0.0 --port 8000" --name backend
-    echo "✅ Backend started on port 8000"
 fi
+
+# Start backend with correct PM2 syntax
+pm2 start python3 --name backend -- main_simple.py --host 0.0.0.0 --port 8000
+echo "✅ Backend started on port 8000"
 
 cd ../..
 sleep 3
@@ -84,7 +84,7 @@ if [ -d "galion-studio" ]; then
         npm install react-hot-toast --silent
     fi
     
-    pm2 start "npm run dev -- -p 3030 -H 0.0.0.0" --name galion-studio
+    pm2 start npm --name galion-studio -- run dev -- -p 3030 -H 0.0.0.0
     echo "✅ Galion Studio started on port 3030"
     cd ..
     sleep 3
@@ -102,7 +102,7 @@ if [ -d "galion-app" ]; then
         npm install --silent
     fi
     
-    pm2 start "npm run dev -- -p 3000 -H 0.0.0.0" --name galion-app
+    pm2 start npm --name galion-app -- run dev -- -p 3000 -H 0.0.0.0
     echo "✅ Galion App started on port 3000"
     cd ..
     sleep 3
@@ -120,7 +120,7 @@ if [ -d "developer-platform" ]; then
         npm install --silent
     fi
     
-    pm2 start "npm run dev -- -p 3003 -H 0.0.0.0" --name developer-platform
+    pm2 start npm --name developer-platform -- run dev -- -p 3003 -H 0.0.0.0
     echo "✅ Developer Platform started on port 3003"
     cd ..
     sleep 3

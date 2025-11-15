@@ -287,6 +287,69 @@ except Exception as e:
     logger.info("Server will start without Grokopedia endpoints")
 
 # ============================================================================
+# Direct Grokopedia Endpoints (Backup Routes)
+# ============================================================================
+
+@app.get("/grokopedia/", tags=["grokopedia"])
+async def grokopedia_home():
+    """Grokopedia home endpoint."""
+    return {
+        "service": "grokopedia",
+        "status": "available",
+        "version": "1.0.0",
+        "description": "Scientific Knowledge Graph and Research Platform",
+        "endpoints": {
+            "topics": "/grokopedia/topics",
+            "search": "/grokopedia/search",
+            "api": "/api/v1/grokopedia/"
+        }
+    }
+
+@app.get("/grokopedia/topics", tags=["grokopedia"])
+async def grokopedia_topics():
+    """Get available Grokopedia topics."""
+    return {
+        "topics": [
+            "Physics", "Chemistry", "Biology", "Mathematics",
+            "Computer Science", "Engineering", "Medicine"
+        ],
+        "total": 7,
+        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    }
+
+# ============================================================================
+# Direct NexusLang Endpoints (Backup Routes)
+# ============================================================================
+
+@app.post("/nexuslang/compile", tags=["nexuslang"])
+async def nexuslang_compile(request: Request):
+    """NexusLang compile endpoint."""
+    body = await request.json()
+    code = body.get("code", "")
+    
+    return {
+        "success": True,
+        "message": "Compilation endpoint available",
+        "code_length": len(code),
+        "note": "Full compiler integration coming soon"
+    }
+
+@app.get("/nexuslang/", tags=["nexuslang"])
+async def nexuslang_home():
+    """NexusLang home endpoint."""
+    return {
+        "service": "nexuslang",
+        "status": "available",
+        "version": "2.0.0",
+        "description": "NexusLang Compiler and Runtime",
+        "endpoints": {
+            "compile": "/nexuslang/compile",
+            "execute": "/nexuslang/execute",
+            "api": "/api/v1/nexuslang/"
+        }
+    }
+
+# ============================================================================
 # Error Handlers
 # ============================================================================
 

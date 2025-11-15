@@ -1,0 +1,295 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "RunPod: Deploy All",
+      "type": "shell",
+      "command": "${workspaceFolder}/cursor-ssh-pipeline/deploy.ps1",
+      "args": ["-Target", "all"],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/cursor-ssh-pipeline/deploy.ps1",
+          "-Target",
+          "all"
+        ]
+      },
+      "linux": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/deploy.sh",
+        "args": ["all", "false"]
+      },
+      "osx": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/deploy.sh",
+        "args": ["all", "false"]
+      }
+    },
+    {
+      "label": "RunPod: Quick Deploy (Skip Build)",
+      "type": "shell",
+      "command": "${workspaceFolder}/cursor-ssh-pipeline/deploy.ps1",
+      "args": ["-SkipBuild"],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/cursor-ssh-pipeline/deploy.ps1",
+          "-SkipBuild"
+        ]
+      },
+      "linux": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/deploy.sh",
+        "args": ["all", "true"]
+      },
+      "osx": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/deploy.sh",
+        "args": ["all", "true"]
+      }
+    },
+    {
+      "label": "RunPod: Check Status",
+      "type": "shell",
+      "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+      "args": ["status"],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+          "status"
+        ]
+      },
+      "linux": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["status"]
+      },
+      "osx": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["status"]
+      }
+    },
+    {
+      "label": "RunPod: View Logs",
+      "type": "shell",
+      "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+      "args": ["logs"],
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+          "logs"
+        ]
+      },
+      "linux": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["logs"]
+      },
+      "osx": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["logs"]
+      }
+    },
+    {
+      "label": "RunPod: Restart Services",
+      "type": "shell",
+      "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+      "args": ["restart"],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+          "restart"
+        ]
+      },
+      "linux": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["restart"]
+      },
+      "osx": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["restart"]
+      }
+    },
+    {
+      "label": "RunPod: Health Check",
+      "type": "shell",
+      "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+      "args": ["health"],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+          "health"
+        ]
+      },
+      "linux": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["health"]
+      },
+      "osx": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["health"]
+      }
+    },
+    {
+      "label": "RunPod: Open Shell",
+      "type": "shell",
+      "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+      "args": ["shell"],
+      "problemMatcher": [],
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+          "shell"
+        ]
+      },
+      "linux": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["shell"]
+      },
+      "osx": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["shell"]
+      }
+    },
+    {
+      "label": "RunPod: Start SSH Tunnel",
+      "type": "shell",
+      "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+      "args": ["tunnel"],
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+          "tunnel"
+        ]
+      },
+      "linux": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["tunnel"]
+      },
+      "osx": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["tunnel"]
+      }
+    },
+    {
+      "label": "RunPod: Pull Latest Code",
+      "type": "shell",
+      "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+      "args": ["pull"],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.ps1",
+          "pull"
+        ]
+      },
+      "linux": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["pull"]
+      },
+      "osx": {
+        "command": "${workspaceFolder}/cursor-ssh-pipeline/quick-commands.sh",
+        "args": ["pull"]
+      }
+    }
+  ]
+}
+

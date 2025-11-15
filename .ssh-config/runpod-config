@@ -1,0 +1,57 @@
+# ============================================
+# RunPod SSH Configuration
+# ============================================
+# This file should be added to your local ~/.ssh/config
+# 
+# Usage:
+#   1. Copy this block to ~/.ssh/config on your local machine
+#   2. Update the Host IP address with your actual RunPod IP
+#   3. Update IdentityFile path if needed
+#   4. Run: ssh runpod
+# ============================================
+
+# RunPod Server - Galion Platform
+Host runpod
+    HostName YOUR_RUNPOD_IP_HERE
+    User root
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    ForwardAgent yes
+    
+# RunPod with SSH tunnel for services
+Host runpod-tunnel
+    HostName YOUR_RUNPOD_IP_HERE
+    User root
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    LocalForward 8000 localhost:8000
+    LocalForward 3001 localhost:3001
+    LocalForward 3002 localhost:3002
+    LocalForward 3003 localhost:3003
+    LocalForward 80 localhost:80
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+# Quick aliases for different services
+Host runpod-backend
+    HostName YOUR_RUNPOD_IP_HERE
+    User root
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    LocalForward 8000 localhost:8000
+    
+Host runpod-frontend
+    HostName YOUR_RUNPOD_IP_HERE
+    User root
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    LocalForward 3001 localhost:3001
+    LocalForward 3002 localhost:3002
+    LocalForward 3003 localhost:3003
+

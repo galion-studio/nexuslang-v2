@@ -1,0 +1,39 @@
+# SSH Pipeline - Git Ignore
+# ============================================
+# Protect sensitive connection information
+
+# Connection information (contains IP, keys, etc.)
+connection-info.json
+*.connection.json
+
+# SSH keys (NEVER commit private keys!)
+*.pem
+*.key
+id_rsa
+id_ed25519
+id_ecdsa
+*.ppk
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+~*
+
+# OS-specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor specific
+*.swp
+*.swo
+*~

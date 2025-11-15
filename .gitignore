@@ -77,6 +77,10 @@ v2/frontend/.next/
 v2/frontend/out/
 v2/frontend/build/
 v2/frontend/dist/
+.next/
+galion-studio/.next/
+galion-app/.next/
+developer-platform/.next/
 
 # Testing
 .pytest_cache/

@@ -128,108 +128,129 @@ rm -f /etc/nginx/sites-enabled/default
 # Add our server blocks to nginx.conf
 log "Adding server blocks to nginx.conf..."
 
-# Find the end of the http block and add our config before the closing brace
-sed -i '/^}$/i\
-    # ============================================\
-    # GALION.STUDIO DOMAIN\
-    # ============================================\
-\
-    # Main Domain - galion.studio (redirects to galion.app)\
-    server {\
-        listen 80;\
-        server_name galion.studio www.galion.studio;\
-        return 301 https://galion.app$request_uri;\
-    }\
-\
-    # ============================================\
-    # GALION.APP DOMAIN\
-    # ============================================\
-\
-    # Main Domain - galion.app (points to main app)\
-    server {\
-        listen 80;\
-        server_name galion.app www.galion.app;\
-\
-        location / {\
-            proxy_pass http://localhost:3000;\
-            proxy_http_version 1.1;\
-            proxy_set_header Host $host;\
-            proxy_set_header X-Real-IP $remote_addr;\
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\
-            proxy_set_header X-Forwarded-Proto $scheme;\
-            proxy_set_header Upgrade $http_upgrade;\
-            proxy_set_header Connection "upgrade";\
-        }\
-\
-        location /_next/static {\
-            proxy_pass http://localhost:3000;\
-            proxy_cache_valid 200 60m;\
-            add_header Cache-Control "public, immutable";\
-        }\
-    }\
-\
-    # API Subdomain - api.galion.app\
-    server {\
-        listen 80;\
-        server_name api.galion.app;\
-\
-        client_max_body_size 100M;\
-        proxy_buffer_size 128k;\
-        proxy_buffers 4 256k;\
-        proxy_busy_buffers_size 256k;\
-\
-        location / {\
-            proxy_pass http://localhost:8000;\
-            proxy_http_version 1.1;\
-            proxy_set_header Host $host;\
-            proxy_set_header X-Real-IP $remote_addr;\
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\
-            proxy_set_header X-Forwarded-Proto $scheme;\
-            proxy_set_header X-Forwarded-Host $host;\
-            proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;\
-            proxy_set_header CF-RAY $http_cf_ray;\
-            proxy_set_header Upgrade $http_upgrade;\
-            proxy_set_header Connection "upgrade";\
-            proxy_connect_timeout 60s;\
-            proxy_send_timeout 60s;\
-            proxy_read_timeout 60s;\
-        }\
-\
-        location /docs {\
-            proxy_pass http://localhost:8000/docs;\
-            proxy_http_version 1.1;\
-            proxy_set_header Host $host;\
-        }\
-\
-        location /health {\
-            proxy_pass http://localhost:8000/health;\
-            access_log off;\
-        }\
-    }\
-\
-    # Developer Subdomain - developer.galion.app\
-    server {\
-        listen 80;\
-        server_name developer.galion.app;\
-\
-        location / {\
-            proxy_pass http://localhost:3003;\
-            proxy_http_version 1.1;\
-            proxy_set_header Host $host;\
-            proxy_set_header X-Real-IP $remote_addr;\
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\
-            proxy_set_header X-Forwarded-Proto $scheme;\
-            proxy_set_header Upgrade $http_upgrade;\
-            proxy_set_header Connection "upgrade";\
-        }\
-\
-        location /_next/static {\
-            proxy_pass http://localhost:3003;\
-            proxy_cache_valid 200 60m;\
-            add_header Cache-Control "public, immutable";\
-        }\
-    }\
-' /etc/nginx/nginx.conf
+# Create a backup
+cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup.$(date +%Y%m%d_%H%M%S)
+
+# Remove the conflicting default config
+rm -f /etc/nginx/sites-enabled/default
+
+# Remove the broken config file
+rm -f /etc/nginx/sites-enabled/galion-platform
+
+# Remove any include lines that were added previously
+sed -i '/include \/etc\/nginx\/sites-enabled\/\*/d' /etc/nginx/nginx.conf
+
+# Find the exact location of the closing brace for the http block
+# and add our server blocks before it
+HTTP_END_LINE=$(grep -n "^}$" /etc/nginx/nginx.conf | tail -1 | cut -d: -f1)
+
+if [ -n "$HTTP_END_LINE" ]; then
+    # Insert our server blocks before the last closing brace
+    sed -i "${HTTP_END_LINE}i\\
+    # ============================================\\
+    # GALION.STUDIO DOMAIN\\
+    # ============================================\\
+\\
+    # Main Domain - galion.studio (redirects to galion.app)\\
+    server {\\
+        listen 80;\\
+        server_name galion.studio www.galion.studio;\\
+        return 301 https://galion.app\$request_uri;\\
+    }\\
+\\
+    # ============================================\\
+    # GALION.APP DOMAIN\\
+    # ============================================\\
+\\
+    # Main Domain - galion.app (points to main app)\\
+    server {\\
+        listen 80;\\
+        server_name galion.app www.galion.app;\\
+\\
+        location / {\\
+            proxy_pass http://localhost:3000;\\
+            proxy_http_version 1.1;\\
+            proxy_set_header Host \$host;\\
+            proxy_set_header X-Real-IP \$remote_addr;\\
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\
+            proxy_set_header X-Forwarded-Proto \$scheme;\\
+            proxy_set_header Upgrade \$http_upgrade;\\
+            proxy_set_header Connection \"upgrade\";\\
+        }\\
+\\
+        location /_next/static {\\
+            proxy_pass http://localhost:3000;\\
+            proxy_cache_valid 200 60m;\\
+            add_header Cache-Control \"public, immutable\";\\
+        }\\
+    }\\
+\\
+    # API Subdomain - api.galion.app\\
+    server {\\
+        listen 80;\\
+        server_name api.galion.app;\\
+\\
+        client_max_body_size 100M;\\
+        proxy_buffer_size 128k;\\
+        proxy_buffers 4 256k;\\
+        proxy_busy_buffers_size 256k;\\
+\\
+        location / {\\
+            proxy_pass http://localhost:8000;\\
+            proxy_http_version 1.1;\\
+            proxy_set_header Host \$host;\\
+            proxy_set_header X-Real-IP \$remote_addr;\\
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\
+            proxy_set_header X-Forwarded-Proto \$scheme;\\
+            proxy_set_header X-Forwarded-Host \$host;\\
+            proxy_set_header CF-Connecting-IP \$http_cf_connecting_ip;\\
+            proxy_set_header CF-RAY \$http_cf_ray;\\
+            proxy_set_header Upgrade \$http_upgrade;\\
+            proxy_set_header Connection \"upgrade\";\\
+            proxy_connect_timeout 60s;\\
+            proxy_send_timeout 60s;\\
+            proxy_read_timeout 60s;\\
+        }\\
+\\
+        location /docs {\\
+            proxy_pass http://localhost:8000/docs;\\
+            proxy_http_version 1.1;\\
+            proxy_set_header Host \$host;\\
+        }\\
+\\
+        location /health {\\
+            proxy_pass http://localhost:8000/health;\\
+            access_log off;\\
+        }\\
+    }\\
+\\
+    # Developer Subdomain - developer.galion.app\\
+    server {\\
+        listen 80;\\
+        server_name developer.galion.app;\\
+\\
+        location / {\\
+            proxy_pass http://localhost:3003;\\
+            proxy_http_version 1.1;\\
+            proxy_set_header Host \$host;\\
+            proxy_set_header X-Real-IP \$remote_addr;\\
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\
+            proxy_set_header X-Forwarded-Proto \$scheme;\\
+            proxy_set_header Upgrade \$http_upgrade;\\
+            proxy_set_header Connection \"upgrade\";\\
+        }\\
+\\
+        location /_next/static {\\
+            proxy_pass http://localhost:3003;\\
+            proxy_cache_valid 200 60m;\\
+            add_header Cache-Control \"public, immutable\";\\
+        }\\
+    }\\
+" /etc/nginx/nginx.conf
+else
+    error "Could not find http block end in nginx.conf"
+    exit 1
+fi
 
 # Test nginx configuration
 log "Testing nginx configuration..."

@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, X, Chrome, Firefox, Safari, Edge } from 'lucide-react'
+import { AlertTriangle, X, Chrome, Firefox } from 'lucide-react'
+import { Monitor, Globe } from 'lucide-react'
 
 interface BrowserInfo {
   name: string
@@ -86,8 +87,8 @@ const BrowserCompatibility: React.FC = () => {
     switch (name.toLowerCase()) {
       case 'chrome': return <Chrome className="h-5 w-5" />
       case 'firefox': return <Firefox className="h-5 w-5" />
-      case 'safari': return <Safari className="h-5 w-5" />
-      case 'edge': return <Edge className="h-5 w-5" />
+      case 'safari': return <Monitor className="h-5 w-5" />
+      case 'edge': return <Globe className="h-5 w-5" />
       default: return <AlertTriangle className="h-5 w-5" />
     }
   }
@@ -95,8 +96,8 @@ const BrowserCompatibility: React.FC = () => {
   const getRecommendedBrowsers = () => [
     { name: 'Chrome', version: '80+', url: 'https://chrome.google.com', icon: <Chrome className="h-4 w-4" /> },
     { name: 'Firefox', version: '78+', url: 'https://firefox.com', icon: <Firefox className="h-4 w-4" /> },
-    { name: 'Safari', version: '14+', url: 'https://apple.com/safari', icon: <Safari className="h-4 w-4" /> },
-    { name: 'Edge', version: '80+', url: 'https://microsoft.com/edge', icon: <Edge className="h-4 w-4" /> }
+    { name: 'Safari', version: '14+', url: 'https://apple.com/safari', icon: <Monitor className="h-4 w-4" /> },
+    { name: 'Edge', version: '80+', url: 'https://microsoft.com/edge', icon: <Globe className="h-4 w-4" /> }
   ]
 
   if (!showWarning || !browserInfo) return null

@@ -11,8 +11,8 @@ cd galion-app && npm install --silent && cd ..
 cd developer-platform && npm install --silent && cd ..
 pm2 delete all 2>/dev/null || true
 cd v2/backend && pm2 start python3 --name backend -- main_simple.py --host 0.0.0.0 --port 8000 && cd ../..
-cd galion-studio && pm2 start npm --name galion-studio -- run dev -- -p 3001 && cd ..
-cd galion-app && pm2 start npm --name galion-app -- run dev -- -p 3002 && cd ..
+cd galion-studio && pm2 start npm --name galion-studio -- run dev -- -p 3030 && cd ..
+cd galion-app && npm install lucide-react --silent && pm2 start npm --name galion-app -- run dev -- -p 3000 && cd ..
 cd developer-platform && pm2 start npm --name developer-platform -- run dev -- -p 3003 && cd ..
 pm2 save
 pm2 status

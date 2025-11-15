@@ -161,7 +161,7 @@ platform-*.ps1
 production-*.ps1
 monitor-*.ps1
 deploy-*.ps1
-deploy-*.sh
+# deploy-*.sh  # Allow deployment scripts
 deploy_*.ps1
 start-*.ps1
 enhanced-*.ps1

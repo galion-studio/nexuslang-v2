@@ -1,39 +1,56 @@
-# Production Dockerfile for NexusLang v2 Backend
-# FastAPI application with all dependencies
+# ============================================
+# GALION BACKEND - DEVELOPMENT DOCKERFILE
+# ============================================
 
-FROM python:3.12-slim
+FROM python:3.11-slim
 
-# Set working directory
-WORKDIR /app
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+ENV DEBUG=true
+ENV RELOAD=true
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    curl \
-    postgresql-client \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        git \
+        libsndfile1 \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first (for caching)
-COPY requirements.txt .
+# Create app user
+RUN useradd --create-home --shell /bin/bash app \
+    && mkdir -p /app \
+    && chown -R app:app /app
+
+# Set work directory
+WORKDIR /app
+
+# Switch to non-root user
+USER app
+
+# Copy requirements first for better caching
+COPY --chown=app:app requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY --chown=app:app . .
 
 # Create logs directory
-RUN mkdir -p /app/logs
+RUN mkdir -p logs
 
 # Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Set Python path and run application
-ENV PYTHONPATH=/app
-WORKDIR /app
-CMD ["python", "start.py"]
+# Run the application
+CMD ["python", "main_simple.py"]

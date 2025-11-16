@@ -1,254 +1,139 @@
-# Galion Agent System - Development and Testing Makefile
+# ============================================
+# GALION VOICE API - MAKEFILE
+# ============================================
+# Common development commands
 
-.PHONY: help install install-dev clean test test-unit test-integration test-performance test-frontend lint format type-check security-scan build-frontend docs serve serve-frontend docker-build docker-up docker-down
+.PHONY: help setup dev prod clean test lint format docs
 
 # Default target
 help:
-	@echo "🚀 Galion Agent System - Development Commands"
-	@echo ""
-	@echo "Installation:"
-	@echo "  install         Install production dependencies"
-	@echo "  install-dev     Install development dependencies"
-	@echo ""
-	@echo "Code Quality:"
-	@echo "  lint            Run all linters (black, isort, flake8)"
-	@echo "  format          Auto-format code (black, isort)"
-	@echo "  type-check      Run mypy type checking"
-	@echo "  security-scan   Run security vulnerability scans"
-	@echo ""
-	@echo "Testing:"
-	@echo "  test            Run all tests"
-	@echo "  test-unit       Run unit tests only"
-	@echo "  test-integration Run integration tests only"
-	@echo "  test-performance Run performance tests only"
-	@echo "  test-frontend   Run frontend tests only"
-	@echo "  coverage        Generate coverage report"
+	@echo "🚀 Galion Voice API - Development Commands"
 	@echo ""
 	@echo "Development:"
-	@echo "  serve           Start development server"
-	@echo "  serve-frontend  Start frontend development server"
-	@echo "  build-frontend  Build frontend for production"
+	@echo "  make setup     - Setup development environment"
+	@echo "  make dev       - Start development services"
+	@echo "  make prod      - Start production services"
+	@echo "  make clean     - Clean up Docker containers and volumes"
 	@echo ""
-	@echo "Docker:"
-	@echo "  docker-build    Build Docker images"
-	@echo "  docker-up       Start all services with Docker Compose"
-	@echo "  docker-down     Stop all services"
+	@echo "Testing:"
+	@echo "  make test      - Run all tests"
+	@echo "  make test-backend  - Run backend tests"
+	@echo "  make test-frontend - Run frontend tests"
 	@echo ""
-	@echo "Maintenance:"
-	@echo "  clean           Clean up cache files and artifacts"
-	@echo "  docs            Generate documentation"
+	@echo "Code Quality:"
+	@echo "  make lint      - Run linters"
+	@echo "  make format    - Format code"
+	@echo ""
+	@echo "Documentation:"
+	@echo "  make docs      - Generate documentation"
+	@echo ""
+	@echo "Deployment:"
+	@echo "  make deploy    - Deploy to production"
+	@echo "  make backup    - Create backup"
 	@echo ""
 
-# Installation
-install:
-	pip install -e .
+# Setup development environment
+setup:
+	@echo "🚀 Setting up development environment..."
+	./scripts/setup-dev.sh
 
-install-dev:
-	pip install -e .[dev]
-	pip install -r tests/requirements.txt
-	cd admin-dashboard && npm install
+# Start development services
+dev:
+	@echo "🚀 Starting development services..."
+	if command -v docker-compose >/dev/null 2>&1; then \
+		docker-compose up -d; \
+	else \
+		docker compose up -d; \
+	fi
+	@echo "📡 Services starting..."
+	@echo "   - Frontend: http://localhost:3003"
+	@echo "   - Backend: http://localhost:8000"
+	@echo "   - API Docs: http://localhost:8000/docs"
 
-# Code Quality
-lint:
-	@echo "🔍 Running code quality checks..."
-	black --check --diff v2 tests
-	isort --check-only --diff v2 tests
-	flake8 v2 tests --max-line-length=100 --extend-ignore=E203,W503
-	mypy v2 --ignore-missing-imports
-	cd admin-dashboard && npm run lint
+# Start production services
+prod:
+	@echo "🚀 Starting production services..."
+	if command -v docker-compose >/dev/null 2>&1; then \
+		docker-compose -f docker-compose.prod.yml up -d; \
+	else \
+		docker compose -f docker-compose.prod.yml up -d; \
+	fi
 
-format:
-	@echo "✨ Formatting code..."
-	black v2 tests
-	isort v2 tests
-	cd admin-dashboard && npm run format
-
-type-check:
-	@echo "🔍 Running type checking..."
-	mypy v2 --ignore-missing-imports
-	cd admin-dashboard && npm run type-check
-
-security-scan:
-	@echo "🔒 Running security scans..."
-	pip install safety bandit
-	safety check
-	bandit -r v2 -f json -o security-report.json
-	cd admin-dashboard && npm audit
-
-# Testing
-test:
-	@echo "🧪 Running all tests..."
-	pytest tests/ -v --tb=short --cov=v2 --cov-report=html --cov-fail-under=80
-
-test-unit:
-	@echo "🧪 Running unit tests..."
-	pytest tests/ -v --tb=short -m "not (integration or performance or slow or external)"
-
-test-integration:
-	@echo "🔗 Running integration tests..."
-	pytest tests/ -v --tb=short -m "integration"
-
-test-performance:
-	@echo "⚡ Running performance tests..."
-	pytest tests/test_performance.py -v --tb=short --benchmark-only
-
-test-frontend:
-	@echo "🎨 Running frontend tests..."
-	cd admin-dashboard && npm run test
-
-coverage:
-	@echo "📊 Generating coverage report..."
-	pytest tests/ --cov=v2 --cov-report=html --cov-report=xml
-	@echo "Coverage report generated in htmlcov/"
-
-# Development
-serve:
-	@echo "🚀 Starting development server..."
-	python -m uvicorn v2.backend.main:app --reload --host 0.0.0.0 --port 8010
-
-serve-frontend:
-	@echo "🎨 Starting frontend development server..."
-	cd admin-dashboard && npm run dev
-
-build-frontend:
-	@echo "🔨 Building frontend for production..."
-	cd admin-dashboard && npm run build
-
-# Docker
-docker-build:
-	@echo "🐳 Building Docker images..."
-	docker-compose build
-
-docker-up:
-	@echo "🚀 Starting all services..."
-	docker-compose up -d
-	@echo "Services started! Access at:"
-	@echo "  - Backend API: http://localhost:8010"
-	@echo "  - Frontend: http://localhost:3000"
-	@echo "  - Admin Dashboard: http://localhost:3000"
-	@echo "  - API Docs: http://localhost:8010/docs"
-
-docker-down:
-	@echo "🛑 Stopping all services..."
-	docker-compose down
-
-# Maintenance
+# Clean up
 clean:
 	@echo "🧹 Cleaning up..."
-	find . -type d -name __pycache__ -exec rm -rf {} +
-	find . -type d -name "*.pyc" -delete
-	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	find . -type d -name ".coverage" -delete
-	find . -type d -name "htmlcov" -exec rm -rf {} +
-	find . -type d -name "node_modules" -exec rm -rf {} +
-	find . -type d -name ".next" -exec rm -rf {} +
-	find . -name "*.pyc" -delete
-	find . -name "*.pyo" -delete
-	find . -name "*.pyd" -delete
-	rm -rf .coverage coverage.xml coverage.json htmlcov/
-	rm -rf admin-dashboard/.next admin-dashboard/out
-	rm -f security-report.json bandit-results.json
+	./scripts/cleanup.sh
 
+# Run all tests
+test: test-backend test-frontend
+
+# Run backend tests
+test-backend:
+	@echo "🧪 Running backend tests..."
+	cd v2/backend && python -m pytest tests/ -v
+
+# Run frontend tests
+test-frontend:
+	@echo "🧪 Running frontend tests..."
+	cd galion-app && npm test
+
+# Run linters
+lint:
+	@echo "🔍 Running linters..."
+	cd v2/backend && python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+	cd galion-app && npm run lint
+
+# Format code
+format:
+	@echo "🎨 Formatting code..."
+	cd v2/backend && python -m black . && python -m isort .
+	cd galion-app && npm run format
+
+# Generate documentation
 docs:
 	@echo "📚 Generating documentation..."
-	pip install sphinx sphinx-rtd-theme
-	sphinx-apidoc -f -o docs/source v2
-	cd docs && make html
+	cd v2/backend && python -m pdoc --html --output-dir docs .
+	cd galion-app && npm run build-docs
 
-# Quick development workflow
-dev-setup: install-dev
-	@echo "✅ Development environment ready!"
-	@echo "Run 'make serve' to start the backend"
-	@echo "Run 'make serve-frontend' to start the frontend"
+# Deploy to production
+deploy:
+	@echo "🚀 Deploying to production..."
+	./scripts/deploy-production.sh
 
-dev-test: lint test-unit
-	@echo "✅ Code quality and unit tests passed!"
+# Create backup
+backup:
+	@echo "💾 Creating backup..."
+	./scripts/backup.sh
 
-ci-test: lint type-check security-scan test
-	@echo "✅ All CI checks passed!"
-
-# Database operations
-db-init:
-	@echo "🗄️ Initializing database..."
-	python -c "from v2.backend.core.database import DatabaseManager; import asyncio; asyncio.run(DatabaseManager().initialize())"
-
-db-migrate:
-	@echo "🗄️ Running database migrations..."
-	python -c "from v2.backend.core.database import DatabaseManager; import asyncio; dm = DatabaseManager(); asyncio.run(dm.migrate())"
-
-# Integration testing
-test-examples:
-	@echo "🧪 Testing examples..."
-	python examples/integrations_demo.py
-
-# Load testing
-load-test:
-	@echo "⚡ Running load tests..."
-	pip install locust
-	locust -f tests/load_tests.py --headless --users 100 --spawn-rate 10 --run-time 30s
-
-# Environment setup
-setup-hooks:
-	@echo "🔗 Setting up git hooks..."
-	cp .githooks/pre-commit .git/hooks/pre-commit
-	cp .githooks/pre-push .git/hooks/pre-push
-	chmod +x .git/hooks/pre-commit .git/hooks/pre-push
-
-# Utility commands
-check-deps:
-	@echo "📦 Checking for outdated dependencies..."
-	pip list --outdated
-	cd admin-dashboard && npm outdated
-
-update-deps:
-	@echo "⬆️ Updating dependencies..."
-	pip install --upgrade -e .
-	pip install --upgrade -r tests/requirements.txt
-	cd admin-dashboard && npm update
-
-# Production deployment helpers
-deploy-check:
-	@echo "🔍 Pre-deployment checks..."
-	@make lint
-	@make test-unit
-	@make type-check
-	@echo "✅ Ready for deployment!"
-
-# Backup and restore
-backup-db:
-	@echo "💾 Backing up database..."
-	docker exec galion_postgres pg_dump -U galion galion > backup_$(date +%Y%m%d_%H%M%S).sql
-
-restore-db:
-	@echo "🔄 Restoring database..."
-	@echo "Usage: make restore-db FILE=backup_file.sql"
-	@if [ -z "$(FILE)" ]; then echo "Error: FILE parameter required"; exit 1; fi
-	docker exec -i galion_postgres psql -U galion galion < $(FILE)
-
-# Monitoring
+# View logs
 logs:
-	@echo "📋 Showing application logs..."
-	docker-compose logs -f backend
+	@echo "📋 Viewing logs..."
+	if command -v docker-compose >/dev/null 2>&1; then \
+		docker-compose logs -f; \
+	else \
+		docker compose logs -f; \
+	fi
 
-logs-frontend:
-	@echo "📋 Showing frontend logs..."
-	docker-compose logs -f frontend
+# Check health
+health:
+	@echo "💓 Checking service health..."
+	@echo "Backend: $$(curl -s http://localhost:8000/health | jq -r '.status' 2>/dev/null || echo 'not running')"
+	@echo "Frontend: $$(curl -s -I http://localhost:3003 | head -1 | cut -d' ' -f2 2>/dev/null || echo 'not running')"
 
-# Emergency commands
-emergency-stop:
-	@echo "🚨 Emergency stop - killing all related processes..."
-	pkill -f "uvicorn.*galion" || true
-	pkill -f "next.*dev" || true
-	docker-compose down --remove-orphans || true
+# Stop all services
+stop:
+	@echo "🛑 Stopping all services..."
+	if command -v docker-compose >/dev/null 2>&1; then \
+		docker-compose down; \
+	else \
+		docker compose down; \
+	fi
 
-# Information
-info:
-	@echo "ℹ️ Galion System Information"
-	@echo "Python version: $$(python --version)"
-	@echo "Node version: $$(cd admin-dashboard && node --version)"
-	@echo "Docker version: $$(docker --version)"
-	@echo "Docker Compose version: $$(docker-compose --version)"
-	@echo ""
-	@echo "Environment variables:"
-	@echo "  PYTHONPATH: $$PYTHONPATH"
-	@echo "  GALION_ENV: $$GALION_ENV"
+# Restart services
+restart:
+	@echo "🔄 Restarting services..."
+	if command -v docker-compose >/dev/null 2>&1; then \
+		docker-compose restart; \
+	else \
+		docker compose restart; \
+	fi

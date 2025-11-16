@@ -1,268 +1,374 @@
-# 🎤 Galion App - Voice-First Development Platform
+# 🎨 Galion Frontend
 
-**Revolutionary voice-first interface for AI-powered development**
+Voice-first React application with no traditional UI - just a pulsing orb and voice interaction.
 
-**URL:** https://app.galion.studio  
-**Port:** 3000
+## Features
 
----
+- 🎤 **Voice-Only Interface** - No keyboard, no mouse, pure voice
+- 🎯 **Pulsing Orb** - Visual feedback that reacts to audio levels
+- 🔄 **Real-Time Streaming** - WebSocket-based voice communication
+- 📱 **Responsive Design** - Works on desktop and mobile
+- 🌙 **Dark Theme** - True black background for immersion
+- ⚡ **Next.js 14** - Modern React framework with App Router
+- 🎨 **Framer Motion** - Smooth animations and transitions
+- 🔒 **TypeScript** - Type-safe development
 
-## Overview
+## Quick Start
 
-Galion App is the world's first truly voice-first development platform, enabling developers to code, query, and create using natural language and voice commands.
+### Using Docker (Recommended)
 
----
-
-## Key Features
-
-### Voice Interface
-- Natural language code generation
-- Voice command recognition
-- Real-time transcription
-- Text-to-speech responses
-- Conversation flow management
-
-### AI Assistance
-- Real-time AI-powered suggestions
-- Context-aware help
-- Code generation and completion
-- Error detection and fixes
-- Learning from your patterns
-
-### Development Tools
-- Voice-activated IDE
-- Natural language queries
-- Code compilation
-- Real-time execution
-- Integrated debugging
-
-### User Experience
-- Intuitive onboarding
-- Beta signup flow
-- User analytics dashboard
-- Subscription management
-- Mobile app support
-
----
-
-## Tech Stack
-
-- **Framework:** Next.js 14.2.33 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS
-- **UI Components:** Radix UI, Lucide React
-- **Voice:** Web Speech API
-- **State:** React Hooks
-- **Mobile:** React Native (Expo)
-
----
-
-## Development
-
-### Install Dependencies
 ```bash
+cd galion-app
+docker build -t galion-frontend .
+docker run -p 3003:3000 galion-frontend
+```
+
+### Local Development
+
+```bash
+# Install dependencies
 npm install
-```
 
-### Run Development Server
-```bash
+# Start development server
 npm run dev
+
+# Open http://localhost:3003
 ```
-
-Access at: http://localhost:3000
-
-### Build for Production
-```bash
-npm run build
-npm run start
-```
-
----
 
 ## Project Structure
 
 ```
 galion-app/
-├── app/                        # Next.js app router
-│   ├── (auth)/                # Authentication pages
-│   │   ├── beta/              # Beta signup
-│   │   ├── login/             # Login page
-│   │   └── register/          # Registration
-│   │
-│   ├── (dashboard)/           # Dashboard pages
-│   │   ├── agents/            # AI agents
-│   │   ├── analytics/         # Analytics
-│   │   ├── billing/           # Billing
-│   │   ├── dashboard/         # Main dashboard
-│   │   ├── developers/        # Developer tools
-│   │   ├── grokopedia/        # Knowledge graph
-│   │   ├── profile/           # User profile
-│   │   ├── subscription/      # Subscriptions
-│   │   └── voice/             # Voice interface
-│   │
-│   ├── admin-*/               # Admin pages
-│   ├── ai-studio/             # AI studio
-│   ├── onboarding/            # User onboarding
-│   └── layout.tsx             # Root layout
-│
-├── components/                # React components
-│   ├── agents/                # Agent components
-│   ├── beta/                  # Beta signup components
-│   ├── chat/                  # Chat interface
-│   ├── voice/                 # Voice components
-│   ├── dashboard/             # Dashboard components
-│   ├── settings/              # Settings components
-│   ├── onboarding/            # Onboarding flow
-│   └── ui/                    # Reusable UI
-│
-├── lib/                       # Utilities
-│   ├── utils.ts               # Helper functions
-│   └── api-client.ts          # API client
-│
-├── middleware/                # Next.js middleware
-│   └── rateLimit.ts           # Rate limiting
-│
-├── mobile/                    # React Native app
-│   ├── app/                   # Mobile screens
-│   ├── assets/                # Images, icons
-│   └── package.json           # Mobile dependencies
-│
-├── types/                     # TypeScript types
-│   └── speech.d.ts            # Voice API types
-│
-└── styles/                    # Styles
-    └── globals.css            # Global CSS
+├── app/                    # Next.js App Router
+│   ├── globals.css         # Global styles (true black theme)
+│   ├── layout.tsx          # Root layout
+│   └── page.tsx            # Home page (voice interface)
+├── components/             # React components
+│   └── voice/              # Voice-related components
+│       └── VoiceOnlyInterface.tsx
+├── lib/                    # Utility libraries
+│   └── voice/              # Voice API client
+│       └── voice-api-client.ts
+├── public/                 # Static assets
+├── styles/                 # Additional styles
+└── docs/                   # Documentation
 ```
 
----
+## Voice Interface
 
-## Environment Variables
+### The Orb
 
-Create `.env.local`:
-```env
-# Backend API
-NEXT_PUBLIC_API_URL=https://api.galion.studio
+The central pulsing orb provides visual feedback:
 
-# App Configuration
-NEXT_PUBLIC_APP_URL=https://app.galion.studio
-NEXT_PUBLIC_ENV=production
+- **Idle**: Subtle pulse, waiting for user input
+- **Listening**: Bright pulse synchronized with audio levels
+- **Processing**: Rapid pulse while AI processes
+- **Speaking**: Smooth animation while AI responds
 
-# Voice API (optional)
-NEXT_PUBLIC_SPEECH_API_KEY=your_key_here
+### Interaction Flow
 
-# Analytics (optional)
-NEXT_PUBLIC_ANALYTICS_ID=your_id_here
-```
+1. **Page Load**: Orb appears with gentle pulse
+2. **Microphone Request**: Browser asks for microphone permission
+3. **Voice Detection**: Orb reacts to audio input levels
+4. **AI Processing**: Visual feedback during processing
+5. **Voice Response**: AI speaks back through speakers
 
----
+## Configuration
 
-## Voice Commands
+### Environment Variables
 
-### Supported Commands:
-- "Create a new project"
-- "Show my dashboard"
-- "Generate code for [description]"
-- "Search for [topic]"
-- "Open settings"
-- "Compile my code"
-- "Run tests"
-
-### Adding New Commands:
-Edit `components/voice/VoiceCommandHandler.tsx`
-
----
-
-## Mobile App
-
-### Setup React Native:
 ```bash
-cd mobile
-npm install
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws
 
-# iOS
-npx expo start --ios
-
-# Android
-npx expo start --android
+# Development
+NODE_ENV=development
 ```
 
-### Build for Production:
+### API Integration
+
+The frontend connects to the backend via:
+
+- **REST API**: `NEXT_PUBLIC_API_URL`
+- **WebSocket**: `NEXT_PUBLIC_WS_URL`
+
+## Development
+
+### Available Scripts
+
 ```bash
-cd mobile
-eas build --platform all
+# Development
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run format       # Format code with Prettier
+
+# Testing
+npm test            # Run Jest tests
+npm run test:watch  # Watch mode tests
+npm run test:coverage # Test coverage report
 ```
 
----
+### Code Quality
 
-## API Integration
+```bash
+# Lint code
+npm run lint
 
-The app communicates with the backend API:
+# Format code
+npm run format
+
+# Type checking
+npm run type-check
+```
+
+## Voice API Client
+
+### WebSocket Integration
 
 ```typescript
-// Example API call
-import { apiClient } from '@/lib/api-client'
+import { VoiceApiClient } from '@/lib/voice/voice-api-client';
 
-const data = await apiClient.post('/api/v1/query', {
-  query: 'Your query here'
-})
+const client = new VoiceApiClient();
+
+// Connect to voice API
+await client.connect();
+
+// Send audio data
+client.sendAudioChunk(audioData);
+
+// Handle responses
+client.onTranscription((text) => {
+  console.log('Transcribed:', text);
+});
+
+client.onAiResponse((text, audio) => {
+  console.log('AI Response:', text);
+  // Play audio response
+});
 ```
 
----
+### Message Types
 
-## Testing
+#### Outgoing Messages
+
+```typescript
+interface AudioChunkMessage {
+  type: 'audio_chunk';
+  audio: string;        // Base64 encoded audio
+  format: string;       // 'webm', 'wav', etc.
+  sampleRate: number;   // Audio sample rate
+}
+```
+
+#### Incoming Messages
+
+```typescript
+interface TranscriptionMessage {
+  type: 'transcription';
+  text: string;
+}
+
+interface AiResponseMessage {
+  type: 'ai_response';
+  text: string;
+  audio?: string;       // Base64 encoded audio response
+}
+
+interface ErrorMessage {
+  type: 'error';
+  message: string;
+}
+```
+
+## Styling
+
+### Global Theme
+
+The application uses a true black theme:
+
+```css
+/* globals.css */
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+  --accent: #00ff88;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+```
+
+### Orb Animation
+
+The pulsing orb uses CSS animations and Framer Motion:
+
+```typescript
+// Smooth pulse animation
+<motion.div
+  animate={{
+    scale: [1, 1.1, 1],
+    opacity: [0.5, 1, 0.5],
+  }}
+  transition={{
+    duration: 2,
+    repeat: Infinity,
+    ease: "easeInOut",
+  }}
+  className="orb"
+/>
+```
+
+## Browser Support
+
+### Audio APIs
+
+- **Web Audio API**: Real-time audio processing
+- **MediaRecorder API**: Audio recording
+- **WebRTC**: High-quality audio capture
+
+### Browser Compatibility
+
+- ✅ Chrome 88+
+- ✅ Firefox 85+
+- ✅ Safari 14+
+- ✅ Edge 88+
+
+## Deployment
+
+### Docker Production
+
+```dockerfile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+### Static Export
+
+For static hosting:
 
 ```bash
-# Run tests (when implemented)
-npm run test
-
-# E2E tests
-npm run test:e2e
+npm run build
+npm run export
 ```
-
----
-
-## Troubleshooting
-
-### Voice Not Working
-- Check browser permissions for microphone
-- Ensure HTTPS connection (required for Web Speech API)
-- Test in Chrome/Edge (best support)
-
-### API Connection Failed
-- Verify backend is running: `pm2 status`
-- Check CORS settings in backend
-- Verify API URL in environment variables
-
-### Build Errors
-- Clear cache: `rm -rf .next`
-- Reinstall: `rm -rf node_modules && npm install`
-- Check Node version: `node --version` (should be 20+)
-
----
 
 ## Performance
 
-### Optimizations:
-- Code splitting
-- Lazy loading
-- Image optimization
-- Font optimization
-- CSS purging
+### Optimizations
 
-### Monitoring:
-- Check build size: `npm run build`
-- Analyze bundle: `npm run analyze` (if configured)
+- **Code Splitting**: Automatic route-based splitting
+- **Image Optimization**: Next.js built-in optimization
+- **Bundle Analysis**: Webpack bundle analyzer
+- **Service Worker**: Offline functionality (future)
 
----
+### Monitoring
+
+```bash
+# Bundle size analysis
+npm run analyze
+
+# Performance metrics
+npm run lighthouse
+```
+
+## Accessibility
+
+- **Keyboard Navigation**: Full keyboard support
+- **Screen Reader**: Voice feedback for visually impaired users
+- **High Contrast**: True black background with high contrast elements
+- **Reduced Motion**: Respects user's motion preferences
+
+## Testing
+
+### Unit Tests
+
+```typescript
+// components/__tests__/VoiceOnlyInterface.test.tsx
+import { render, screen } from '@testing-library/react';
+import VoiceOnlyInterface from '../VoiceOnlyInterface';
+
+test('renders pulsing orb', () => {
+  render(<VoiceOnlyInterface />);
+  const orb = screen.getByRole('button', { name: /voice interface/i });
+  expect(orb).toBeInTheDocument();
+});
+```
+
+### Integration Tests
+
+```typescript
+// Test voice API integration
+test('connects to voice API', async () => {
+  const client = new VoiceApiClient();
+  await expect(client.connect()).resolves.toBeDefined();
+});
+```
 
 ## Contributing
 
-1. Create feature branch
-2. Make changes
-3. Test locally
-4. Submit pull request
+1. Follow TypeScript and React best practices
+2. Add tests for new components
+3. Update documentation
+4. Create a pull request
 
----
+## Troubleshooting
 
-**Galion App - Voice-first development made simple** 🎤✨
+### Common Issues
 
+1. **Microphone permission denied**
+   - Check browser permissions
+   - Ensure HTTPS in production
+   - Verify WebRTC support
+
+2. **WebSocket connection fails**
+   - Check backend is running
+   - Verify WebSocket URL configuration
+   - Check firewall settings
+
+3. **Audio playback issues**
+   - Check browser audio permissions
+   - Verify audio format support
+   - Check volume settings
+
+4. **Orb not animating**
+   - Check Framer Motion installation
+   - Verify CSS animations support
+   - Check for JavaScript errors
+
+### Debug Mode
+
+Enable debug logging:
+
+```bash
+# In browser console
+localStorage.setItem('debug', 'galion:*');
+```
+
+## License
+
+MIT License - see LICENSE file for details.

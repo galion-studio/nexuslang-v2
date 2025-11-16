@@ -1,0 +1,178 @@
+# ============================================
+# GALION VOICE API - CADDY CONFIGURATION
+# ============================================
+# Alternative to nginx - simpler SSL management
+
+# Main Galion App
+galion.app {
+    # Automatic HTTPS
+    tls admin@galion.app
+
+    # Rate limiting
+    rate_limit {
+        zone static {
+            key {path}
+            window 1m
+            events 100
+        }
+        zone api {
+            key {remote}
+            window 1m
+            events 20
+        }
+        zone voice {
+            key {remote}
+            window 1m
+            events 5
+        }
+    }
+
+    # Frontend (Next.js)
+    reverse_proxy localhost:3003 {
+        # WebSocket support
+        header_up Upgrade {>Upgrade}
+        header_up Connection {>Connection}
+    }
+
+    # API proxy
+    handle /api/* {
+        rate_limit api
+        reverse_proxy localhost:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {>X-Forwarded-For}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Voice WebSocket
+    handle /ws/* {
+        rate_limit voice
+        reverse_proxy localhost:8000 {
+            header_up Upgrade {>Upgrade}
+            header_up Connection {>Connection}
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {>X-Forwarded-For}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Static files
+    @static {
+        file {
+            try_files {path} {path}/ /index.html
+        }
+        path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2
+    }
+    handle @static {
+        header Cache-Control max-age=31536000
+    }
+
+    # Security headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    }
+}
+
+# API Gateway
+api.galion.app {
+    tls admin@galion.app
+
+    rate_limit {
+        zone api {
+            key {remote}
+            window 1m
+            events 20
+        }
+        zone voice {
+            key {remote}
+            window 1m
+            events 5
+        }
+    }
+
+    # CORS headers
+    header {
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        Access-Control-Allow-Headers "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+    }
+
+    # Handle preflight requests
+    @preflight {
+        method OPTIONS
+    }
+    respond @preflight 204
+
+    # API routes
+    reverse_proxy localhost:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {>X-Forwarded-For}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Voice WebSocket
+    handle /ws/* {
+        rate_limit voice
+        reverse_proxy localhost:8000 {
+            header_up Upgrade {>Upgrade}
+            header_up Connection {>Connection}
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {>X-Forwarded-For}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Health check (no rate limiting)
+    handle /health {
+        reverse_proxy localhost:8000
+    }
+}
+
+# Developer Platform
+developer.galion.app {
+    tls admin@galion.app
+
+    rate_limit {
+        zone frontend {
+            key {remote}
+            window 1m
+            events 100
+        }
+    }
+
+    # Developer IDE
+    reverse_proxy localhost:3004 {
+        header_up Upgrade {>Upgrade}
+        header_up Connection {>Connection}
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {>X-Forwarded-For}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # API access for development
+    handle /api/* {
+        reverse_proxy localhost:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {>X-Forwarded-For}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+}
+
+# Redirect www to non-www
+www.galion.app {
+    redir https://galion.app{uri} permanent
+}
+

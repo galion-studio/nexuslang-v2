@@ -1,0 +1,24 @@
+{
+  "name": "@galion/coin-alpha",
+  "version": "0.0.0-alpha",
+  "private": true,
+  "description": "Unaudited Polygon Amoy skeleton for the Galion coin alpha. Deployment is disabled. Token name and symbol are development placeholders.",
+  "license": "MIT",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:chain-guard": "GALION_TEST_CHAIN_ID=31337 hardhat test test/ChainGuard.ts",
+    "test:all": "npm test && npm run test:chain-guard",
+    "deploy": "node -e \"console.error('Deployment is disabled. This package must not send testnet or mainnet transactions.'); process.exit(1)\""
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.6.1",
+    "@openzeppelin/contracts-upgradeable": "5.6.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "5.0.0",
+    "@openzeppelin/hardhat-upgrades": "3.9.1",
+    "hardhat": "2.29.1",
+    "typescript": "5.8.3"
+  }
+}

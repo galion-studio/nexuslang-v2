@@ -107,3 +107,22 @@ user-content/
 # Production data
 v1/galion/data/
 v2/data/
+
+# G.A.L.I.O.N. hygiene: secrets, audio, models, build output, OS junk
+!.env.example
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+*.onnx
+*.safetensors
+*.pt
+*.ckpt
+*.gguf
+node_modules/
+target/
+Thumbs.db
+
+# Local database data
+**/data/postgres/pgdata/

@@ -107,3 +107,21 @@ user-content/
 # Production data
 v1/galion/data/
 v2/data/
+
+# Dependency trees. Nested .gitignore files do not cover every service,
+# and a full node_modules tree was committed under v1/galion/services/.
+node_modules/
+
+# Live database clusters copied from a running container.
+# v1/galion/data/ and v2/data/ already cover the known trees once those
+# paths are untracked. These rules also catch a copy dropped elsewhere.
+**/pgdata/
+**/pg_wal/
+**/pg_stat_tmp/
+postmaster.pid
+postmaster.opts
+**/data/postgres/
+**/data/redis/
+**/data/prometheus/
+**/appendonlydir/
+*.rdb

@@ -1,0 +1,29 @@
+title = "nexuslang-v2"
+
+# Default gitleaks rules stay in force. This file only allowlists
+# placeholders that are already written as examples. Do not add live
+# credentials, partial keys, or hashes of real secrets here.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented false positives: example tokens in docs and curl snippets."
+regexTarget = "secret"
+regexes = [
+  # curl and API docs: YOUR_TOKEN, YOUR_API_KEY, YOUR_JWT_TOKEN, YOUR_TOKEN_HERE
+  '''(?i)^your[_-]?(api[_-]?key|jwt[_-]?token|token([_-]?here)?)$''',
+  # negative-test snippets: invalid-token, invalid_token, expired-token-here
+  '''(?i)^invalid[_-]?token$''',
+  '''(?i)^expired-token-here$''',
+  # role examples in permission docs
+  '''(?i)^regular_user_token$''',
+  '''(?i)^admin_jwt_token$''',
+  # grafana curl example uses the literal USER:PASSWORD
+  '''(?i)^user:password$''',
+  # CI and security-doc fixtures, not generated secrets
+  '''(?i)^test-(secret-)?key-min-32-chars(-long)?$''',
+  # truncated sample JWT headers ending in three dots, not a signed token
+  '''^eyJ[A-Za-z0-9_-]{8,60}\.\.\.$''',
+  # deploy doc placeholder, not an OpenRouter key
+  '''(?i)^sk-or-v1-your_key$''',
+]

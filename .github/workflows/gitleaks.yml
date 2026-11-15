@@ -1,0 +1,52 @@
+# Secret scan for commits introduced by a push or pull request.
+# Live credentials already in main history are not allowlisted. This
+# workflow does not rewrite that history. A full-history scan still
+# reports them; see docs/credential-rotation.md.
+
+name: gitleaks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          version=8.28.0
+          archive="gitleaks_${version}_linux_x64.tar.gz"
+          curl -fsSL -o "$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}"
+          echo "a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb  ${archive}" | sha256sum -c -
+          tar -xzf "$archive" gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Scan commits in this push or pull request
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            git cat-file -e "${base}^{commit}" 2>/dev/null || git fetch --no-tags origin "${base}"
+            range="${base}..HEAD"
+          else
+            before="${{ github.event.before }}"
+            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+              range="-1"
+            else
+              range="${before}..${{ github.sha }}"
+            fi
+          fi
+          echo "gitleaks log range: ${range}"
+          gitleaks detect --source . --config .gitleaks.toml --redact --log-opts="${range}" --verbose
